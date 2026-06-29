@@ -957,9 +957,20 @@ function startLiveLocation(){
       me._geoT=t;
       queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
     }
+    // As you travel, re-center the patrol divisions on you (throttled, only after moving a few km)
+    if((Math.abs(me.lat-TOWN.lat)+Math.abs(me.lng-TOWN.lng))>0.025 && (!me._jdT || t-me._jdT>30000)){
+      me._jdT=t; recenterJurisdiction(me.lat, me.lng);
+    }
   }, function(){}, { enableHighAccuracy:true, maximumAge:4000, timeout:20000 });
 }
 function stopLiveLocation(){ if(geoWatchId!=null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); } geoWatchId=null; }
+function recenterJurisdiction(lat,lng){
+  TOWN.lat=lat; TOWN.lng=lng; TOWN.real=true;
+  BEAT_POS=computeBeats();
+  units.forEach(function(u){ if(u.ai && u.beat && BEAT_POS[u.beat]){ u.lat=BEAT_POS[u.beat].lat; u.lng=BEAT_POS[u.beat].lng; refreshUnitMarker(u); } });
+  if(map){ drawJurisdiction(); map.setView([lat+JD_OFFLAT*0.5, lng], map.getZoom()); }
+  refreshUnitMarker(self()); updateEnrouteLines(); renderDuty();
+}
 
 // ============================================================
 //  SEED DATA

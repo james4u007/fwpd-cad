@@ -544,6 +544,12 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           <button id="setLocBtn" title="Set my location by address">📍</button>
           <button id="callsToggleBtn" title="Toggle call pins">📞</button>
         </div>
+        <div class="map-overlay ovl-card" id="routeBar" style="top:14px;left:50%;transform:translateX(-50%);padding:7px;display:flex;gap:6px;align-items:center;z-index:600">
+          <input id="routeInput" placeholder="Route to address…" style="width:230px;max-width:54vw;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px;outline:none">
+          <button id="routeGo" style="padding:9px 13px;border-radius:8px;border:none;background:var(--accent2);color:#fff;font-weight:700;font-size:13px">Route</button>
+          <button id="routeClear" title="Clear route" style="padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);display:none">✕</button>
+        </div>
+        <div class="map-overlay ovl-card" id="routeInfo" style="top:64px;left:50%;transform:translateX(-50%);padding:8px 14px;display:none;font-size:13px;z-index:600;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       </div>
 
       <!-- CALLS VIEW -->
@@ -1220,6 +1226,48 @@ function showLocationPrompt(){
 window.showLocationPrompt=showLocationPrompt;
 function useMyLocationFromPrompt(){ closeModal(); locateMe(); }
 window.useMyLocationFromPrompt=useMyLocationFromPrompt;
+
+// ---- Address search + driving route from the officer's current location ----
+var routeLayer=null, destMarker=null;
+function clearRoute(){
+  if(routeLayer && map) map.removeLayer(routeLayer); routeLayer=null;
+  if(destMarker && map) map.removeLayer(destMarker); destMarker=null;
+  if($("routeInfo")) $("routeInfo").style.display="none";
+  if($("routeClear")) $("routeClear").style.display="none";
+}
+window.clearRoute=clearRoute;
+function doRoute(){
+  var q=($("routeInput").value||"").trim(); if(!q) return;
+  var me=self(); if(!me||!map) return;
+  var info=$("routeInfo"); info.style.display="block"; info.textContent="Finding "+q+"…";
+  fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(q),{headers:{"Accept":"application/json"}})
+   .then(function(r){return r.json();}).then(function(j){
+     if(!j||!j.length){ info.textContent="Address not found — try a fuller address."; return; }
+     var d=j[0], dlat=parseFloat(d.lat), dlng=parseFloat(d.lon), label=d.display_name.split(",").slice(0,2).join(",");
+     info.textContent="Calculating route…";
+     fetch("https://router.project-osrm.org/route/v1/driving/"+me.lng+","+me.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson")
+       .then(function(r){return r.json();}).then(function(rj){
+         clearRoute();
+         destMarker=L.marker([dlat,dlng],{ icon:L.divIcon({className:"",html:"<div class='call-marker'><svg viewBox='0 0 26 34'><path d='M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z' fill='#3da9fc'/></svg><span>★</span></div>",iconSize:[26,34],iconAnchor:[13,34]}) }).addTo(map);
+         destMarker.bindPopup("<div class='pop'><h4>Destination</h4><div class='pm'>"+esc(d.display_name.split(',').slice(0,3).join(','))+"</div></div>");
+         if(rj&&rj.routes&&rj.routes[0]&&rj.routes[0].geometry){
+           var coords=rj.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
+           routeLayer=L.polyline(coords,{color:"#3da9fc",weight:5,opacity:0.9}).addTo(map);
+           try{ map.fitBounds(routeLayer.getBounds().pad(0.2)); }catch(e){}
+           var mi=(rj.routes[0].distance/1000)*0.621371, min=Math.round(rj.routes[0].duration/60);
+           info.innerHTML="<b>🚗 "+mi.toFixed(1)+" mi · ~"+min+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+"</span>";
+         } else {
+           map.setView([dlat,dlng],15);
+           info.innerHTML="📍 "+esc(label)+" — no road route found.";
+         }
+         if($("routeClear")) $("routeClear").style.display="";
+       }).catch(function(){ info.textContent="Routing failed — check your connection."; });
+   }).catch(function(){ info.textContent="Lookup failed — check your connection."; });
+}
+window.doRoute=doRoute;
+if($("routeGo")) $("routeGo").onclick=doRoute;
+if($("routeInput")) $("routeInput").addEventListener("keydown",function(e){ if(e.key==="Enter") doRoute(); });
+if($("routeClear")) $("routeClear").onclick=function(){ clearRoute(); $("routeInput").value=""; };
 
 // ---- JURISDICTION: divisions + beats (South = our JD) ----
 var jdLayers=[];

@@ -515,11 +515,13 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <div class="view active" id="mapView">
         <div id="map"></div>
         <div class="map-overlay ovl-card" id="dutyPanel">
-          <h3>Units On Duty <b id="dpTotal">0</b></h3>
-          <div id="dutyRows"></div>
-          <div style="border-top:1px solid var(--line);margin-top:9px;padding-top:8px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Patrol Divisions</div>
-            <div id="jdRows"></div>
+          <h3 id="dutyToggle" style="cursor:pointer;user-select:none;margin-bottom:0"><span>Units On Duty <b id="dpTotal">0</b></span><span id="dutyChevron" style="transition:transform .2s">▾</span></h3>
+          <div id="dutyBody" style="margin-top:8px">
+            <div id="dutyRows"></div>
+            <div style="border-top:1px solid var(--line);margin-top:9px;padding-top:8px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Patrol Divisions</div>
+              <div id="jdRows"></div>
+            </div>
           </div>
         </div>
         <div class="map-overlay ovl-card" id="streetPanel">
@@ -1150,6 +1152,15 @@ function applyNewCenter(lat,lng){
   renderDuty(); renderRoster();
 }
 if($("setLocBtn")) $("setLocBtn").onclick=openLocationModal;
+
+// Collapsible Units-On-Duty panel (so it doesn't cover the map)
+function setDutyCollapsed(collapsed){
+  var b=$("dutyBody"), c=$("dutyChevron"); if(!b) return;
+  b.style.display = collapsed ? "none" : "";
+  if(c) c.style.transform = collapsed ? "rotate(-90deg)" : "";
+}
+if($("dutyToggle")) $("dutyToggle").onclick=function(){ setDutyCollapsed($("dutyBody").style.display!=="none"); };
+if(window.innerWidth<=820) setDutyCollapsed(true); // start collapsed on phones
 
 // ---- JURISDICTION: divisions + beats (South = our JD) ----
 var jdLayers=[];

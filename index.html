@@ -1236,33 +1236,53 @@ function clearRoute(){
   if($("routeClear")) $("routeClear").style.display="none";
 }
 window.clearRoute=clearRoute;
+function haversineMi(la1,lo1,la2,lo2){
+  var R=3958.8, dLa=(la2-la1)*Math.PI/180, dLo=(lo2-lo1)*Math.PI/180;
+  var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+// Geocode an address: Photon first (CORS-friendly), Nominatim fallback. Resolves {lat,lng,label} or null.
+function geocodeAddress(q){
+  return fetch("https://photon.komoot.io/api/?limit=1&q="+encodeURIComponent(q))
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(j){ if(j&&j.features&&j.features.length){ var f=j.features[0],c=f.geometry.coordinates,p=f.properties||{}; return {lat:c[1],lng:c[0],label:[p.name,p.street,p.city,p.state].filter(Boolean).join(", ")||q}; } throw 0; })
+    .catch(function(){
+      return fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(q),{headers:{"Accept":"application/json"}})
+        .then(function(r){return r.json();})
+        .then(function(j){ if(j&&j.length){ return {lat:parseFloat(j[0].lat),lng:parseFloat(j[0].lon),label:j[0].display_name}; } return null; })
+        .catch(function(){ return null; });
+    });
+}
 function doRoute(){
   var q=($("routeInput").value||"").trim(); if(!q) return;
   var me=self(); if(!me||!map) return;
-  var info=$("routeInfo"); info.style.display="block"; info.textContent="Finding "+q+"…";
-  fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(q),{headers:{"Accept":"application/json"}})
-   .then(function(r){return r.json();}).then(function(j){
-     if(!j||!j.length){ info.textContent="Address not found — try a fuller address."; return; }
-     var d=j[0], dlat=parseFloat(d.lat), dlng=parseFloat(d.lon), label=d.display_name.split(",").slice(0,2).join(",");
-     info.textContent="Calculating route…";
-     fetch("https://router.project-osrm.org/route/v1/driving/"+me.lng+","+me.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson")
-       .then(function(r){return r.json();}).then(function(rj){
-         clearRoute();
-         destMarker=L.marker([dlat,dlng],{ icon:L.divIcon({className:"",html:"<div class='call-marker'><svg viewBox='0 0 26 34'><path d='M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z' fill='#3da9fc'/></svg><span>★</span></div>",iconSize:[26,34],iconAnchor:[13,34]}) }).addTo(map);
-         destMarker.bindPopup("<div class='pop'><h4>Destination</h4><div class='pm'>"+esc(d.display_name.split(',').slice(0,3).join(','))+"</div></div>");
-         if(rj&&rj.routes&&rj.routes[0]&&rj.routes[0].geometry){
-           var coords=rj.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
-           routeLayer=L.polyline(coords,{color:"#3da9fc",weight:5,opacity:0.9}).addTo(map);
-           try{ map.fitBounds(routeLayer.getBounds().pad(0.2)); }catch(e){}
-           var mi=(rj.routes[0].distance/1000)*0.621371, min=Math.round(rj.routes[0].duration/60);
-           info.innerHTML="<b>🚗 "+mi.toFixed(1)+" mi · ~"+min+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+"</span>";
-         } else {
-           map.setView([dlat,dlng],15);
-           info.innerHTML="📍 "+esc(label)+" — no road route found.";
-         }
-         if($("routeClear")) $("routeClear").style.display="";
-       }).catch(function(){ info.textContent="Routing failed — check your connection."; });
-   }).catch(function(){ info.textContent="Lookup failed — check your connection."; });
+  var info=$("routeInfo"); info.style.display="block"; info.textContent="Finding “"+q+"”…";
+  geocodeAddress(q).then(function(loc){
+    if(!loc){ info.textContent="Address not found — try a fuller address."; return; }
+    var dlat=loc.lat, dlng=loc.lng, label=(loc.label||q).split(",").slice(0,2).join(",");
+    info.textContent="Calculating route…";
+    clearRoute();
+    destMarker=L.marker([dlat,dlng],{ icon:L.divIcon({className:"",html:"<div class='call-marker'><svg viewBox='0 0 26 34'><path d='M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z' fill='#3da9fc'/></svg><span>★</span></div>",iconSize:[26,34],iconAnchor:[13,34]}) }).addTo(map);
+    destMarker.bindPopup("<div class='pop'><h4>Destination</h4><div class='pm'>"+esc(label)+"</div></div>");
+    if($("routeClear")) $("routeClear").style.display="";
+    fetch("https://router.project-osrm.org/route/v1/driving/"+me.lng+","+me.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson")
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(rj){
+        if(!(rj&&rj.routes&&rj.routes[0]&&rj.routes[0].geometry)) throw 0;
+        var coords=rj.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
+        routeLayer=L.polyline(coords,{color:"#3da9fc",weight:5,opacity:0.9}).addTo(map);
+        try{ map.fitBounds(routeLayer.getBounds().pad(0.2)); }catch(e){}
+        var mi=(rj.routes[0].distance/1000)*0.621371, min=Math.round(rj.routes[0].duration/60);
+        info.innerHTML="<b>🚗 "+mi.toFixed(1)+" mi · ~"+min+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+"</span>";
+      })
+      .catch(function(){
+        // Routing service unavailable — show a straight-line guide + distance so it still works
+        routeLayer=L.polyline([[me.lat,me.lng],[dlat,dlng]],{color:"#3da9fc",weight:4,opacity:0.8,dashArray:"6 8"}).addTo(map);
+        try{ map.fitBounds(routeLayer.getBounds().pad(0.3)); }catch(e){}
+        var mi=haversineMi(me.lat,me.lng,dlat,dlng);
+        info.innerHTML="<b>📍 "+mi.toFixed(1)+" mi (direct)</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+" — live road route unavailable</span>";
+      });
+  });
 }
 window.doRoute=doRoute;
 if($("routeGo")) $("routeGo").onclick=doRoute;

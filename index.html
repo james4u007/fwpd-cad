@@ -901,13 +901,13 @@ function startShift(){
     renderAll();
     startClock();
     startSimulation();
-    startLiveLocation();
     logEvent("Shift started — "+session.callsign+" ("+session.name+") logged on as "+session.type+(usedReal?" — real GPS location acquired":""), "info");
     logShift(session.callsign, "logged on duty as "+session.type);
     toast("Logged On Duty","Welcome "+session.callsign+". You are AVAILABLE.","");
     if(usedReal && TOWN.approx) toast("📍 Location Found","Approximate location from your network"+(TOWN.place?(": "+TOWN.place):"")+". For pinpoint GPS, use the launcher & click Allow, or set your exact address with the 📍 button.","");
     else if(usedReal) toast("📍 GPS Locked","Map centered on your exact location.","");
     else toast("📍 Location Unavailable","Couldn't reach a location service. Use the 📍 button to type your address.","");
+    setTimeout(showLocationPrompt, 500);
   });
 }
 var geoLocError=null;
@@ -933,17 +933,7 @@ function acquireLocationThen(done){
     }).catch(function(){ ipApi(); });
   }
   // 1) Precise browser GPS — only works on https/localhost (e.g. via the launcher)
-  if(!navigator.geolocation){ ipFallback(); return; }
-  var finished=false;
-  var to=setTimeout(function(){ if(!finished){ finished=true; ipFallback(); } }, 8000);
-  navigator.geolocation.getCurrentPosition(function(pos){
-    if(finished) return; finished=true; clearTimeout(to);
-    TOWN.lat=pos.coords.latitude; TOWN.lng=pos.coords.longitude; TOWN.zoom=15; TOWN.real=true; TOWN.approx=false;
-    done(true);
-  }, function(err){
-    if(finished) return; finished=true; clearTimeout(to);
-    geoLocError=err; ipFallback();   // GPS blocked (file://) → fall back to network location
-  }, { enableHighAccuracy:false, timeout:7000, maximumAge:60000 });
+  ipFallback(); // start centered on approximate (network) location; precise GPS is requested via the on-screen prompt
 }
 // Live GPS tracking — continuously update the signed-in unit's position (works on https / localhost; great on mobile)
 var geoWatchId=null;
@@ -1193,12 +1183,13 @@ if($("dutyToggle")) $("dutyToggle").onclick=function(){ setDutyCollapsed($("duty
 if(window.innerWidth<=820) setDutyCollapsed(true); // start collapsed on phones
 
 // "Locate Me" — fetch precise high-accuracy GPS now, center & zoom on the officer
-if($("locateBtn")) $("locateBtn").onclick=function(){
+function locateMe(btn){
   var u=self(); if(!u) return;
   if(!navigator.geolocation){ toast("📍 GPS Unavailable","This device/browser has no geolocation.","p1"); return; }
-  var b=this; b.style.opacity="0.5";
+  if(btn) btn.style.opacity="0.5";
+  if($("myStreet")) $("myStreet").textContent="Locating…";
   navigator.geolocation.getCurrentPosition(function(pos){
-    b.style.opacity="1";
+    if(btn) btn.style.opacity="1";
     u.lat=pos.coords.latitude; u.lng=pos.coords.longitude; TOWN.real=true;
     recenterJurisdiction(u.lat,u.lng);
     if(map) map.setView([u.lat,u.lng], 16);
@@ -1207,10 +1198,28 @@ if($("locateBtn")) $("locateBtn").onclick=function(){
     var acc=Math.round(pos.coords.accuracy||0);
     toast("📍 Located","Centered on your precise location"+(acc?(" (±"+acc+" m)"):"")+".","");
   }, function(err){
-    b.style.opacity="1";
+    if(btn) btn.style.opacity="1";
     toast("📍 Location Failed", (err&&err.message)?err.message:"Allow location access, then try again.","p1");
   }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
-};
+}
+window.locateMe=locateMe;
+if($("locateBtn")) $("locateBtn").onclick=function(){ locateMe(this); };
+
+// Centered, can't-miss prompt that triggers the browser's Allow dialog on tap
+function showLocationPrompt(){
+  if(!navigator.geolocation) return;
+  showModal(
+    "<div class='modal-h'><h3>📍 Enable Location</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b' style='text-align:center'>"+
+      "<div style='font-size:44px;margin:6px 0'>📍</div>"+
+      "<p style='margin:0 0 16px;color:var(--muted);font-size:14px'>Put your unit on the map and track it live. Tap the button below, then choose <b style='color:var(--text)'>Allow</b> when your browser asks for location.</p>"+
+      "<button class='btn' onclick='useMyLocationFromPrompt()'>📍 Use My Location</button>"+
+      "<div style='margin-top:12px'><a href='#' onclick='closeModal();return false;' style='color:var(--muted);font-size:13px'>Not now</a></div>"+
+    "</div>");
+}
+window.showLocationPrompt=showLocationPrompt;
+function useMyLocationFromPrompt(){ closeModal(); locateMe(); }
+window.useMyLocationFromPrompt=useMyLocationFromPrompt;
 
 // ---- JURISDICTION: divisions + beats (South = our JD) ----
 var jdLayers=[];

@@ -776,11 +776,12 @@ function logEvent(text, kind){ // kind: info, call, status, backup, prio
   if(logEntries.length>300) logEntries.pop();
   if($("logView") && $("logView").classList.contains("active")) renderLog();
 }
-function toast(title, body, cls){
+function toast(title, body, cls, onClick){
   var t = el("div","toast"+(cls?" "+cls:""));
   t.innerHTML = "<h4>"+title+"</h4><p>"+body+"</p>";
+  if(onClick){ t.style.cursor="pointer"; t.title="Click to route"; t.onclick=function(){ try{ onClick(); }catch(e){} t.remove(); }; }
   $("toasts").appendChild(t);
-  setTimeout(function(){ t.style.transition="opacity .4s"; t.style.opacity="0"; setTimeout(function(){ t.remove(); },400); }, 5200);
+  setTimeout(function(){ t.style.transition="opacity .4s"; t.style.opacity="0"; setTimeout(function(){ t.remove(); },400); }, onClick?9000:5200);
 }
 // simple WebAudio beep
 var actx=null;
@@ -1253,37 +1254,48 @@ function geocodeAddress(q){
         .catch(function(){ return null; });
     });
 }
+function drawRouteTo(dlat,dlng,label){
+  var me=self(); if(!me||!map) return;
+  var info=$("routeInfo"); if(info){ info.style.display="block"; info.textContent="Calculating route…"; }
+  clearRoute();
+  destMarker=L.marker([dlat,dlng],{ icon:L.divIcon({className:"",html:"<div class='call-marker'><svg viewBox='0 0 26 34'><path d='M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z' fill='#3da9fc'/></svg><span>★</span></div>",iconSize:[26,34],iconAnchor:[13,34]}) }).addTo(map);
+  destMarker.bindPopup("<div class='pop'><h4>Destination</h4><div class='pm'>"+esc(label||"")+"</div></div>");
+  if($("routeClear")) $("routeClear").style.display="";
+  fetch("https://router.project-osrm.org/route/v1/driving/"+me.lng+","+me.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson")
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(rj){
+      if(!(rj&&rj.routes&&rj.routes[0]&&rj.routes[0].geometry)) throw 0;
+      var coords=rj.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
+      routeLayer=L.polyline(coords,{color:"#3da9fc",weight:5,opacity:0.9}).addTo(map);
+      try{ map.fitBounds(routeLayer.getBounds().pad(0.2)); }catch(e){}
+      var mi=(rj.routes[0].distance/1000)*0.621371, min=Math.round(rj.routes[0].duration/60);
+      if(info) info.innerHTML="<b>🚗 "+mi.toFixed(1)+" mi · ~"+min+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label||"")+"</span>";
+    })
+    .catch(function(){
+      routeLayer=L.polyline([[me.lat,me.lng],[dlat,dlng]],{color:"#3da9fc",weight:4,opacity:0.8,dashArray:"6 8"}).addTo(map);
+      try{ map.fitBounds(routeLayer.getBounds().pad(0.3)); }catch(e){}
+      var mi=haversineMi(me.lat,me.lng,dlat,dlng);
+      if(info) info.innerHTML="<b>📍 "+mi.toFixed(1)+" mi (direct)</b> &nbsp;<span style='color:var(--muted)'>"+esc(label||"")+" — live road route unavailable</span>";
+    });
+}
 function doRoute(){
   var q=($("routeInput").value||"").trim(); if(!q) return;
-  var me=self(); if(!me||!map) return;
-  var info=$("routeInfo"); info.style.display="block"; info.textContent="Finding “"+q+"”…";
+  if(!self()||!map) return;
+  var info=$("routeInfo"); if(info){ info.style.display="block"; info.textContent="Finding “"+q+"”…"; }
   geocodeAddress(q).then(function(loc){
-    if(!loc){ info.textContent="Address not found — try a fuller address."; return; }
-    var dlat=loc.lat, dlng=loc.lng, label=(loc.label||q).split(",").slice(0,2).join(",");
-    info.textContent="Calculating route…";
-    clearRoute();
-    destMarker=L.marker([dlat,dlng],{ icon:L.divIcon({className:"",html:"<div class='call-marker'><svg viewBox='0 0 26 34'><path d='M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z' fill='#3da9fc'/></svg><span>★</span></div>",iconSize:[26,34],iconAnchor:[13,34]}) }).addTo(map);
-    destMarker.bindPopup("<div class='pop'><h4>Destination</h4><div class='pm'>"+esc(label)+"</div></div>");
-    if($("routeClear")) $("routeClear").style.display="";
-    fetch("https://router.project-osrm.org/route/v1/driving/"+me.lng+","+me.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson")
-      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      .then(function(rj){
-        if(!(rj&&rj.routes&&rj.routes[0]&&rj.routes[0].geometry)) throw 0;
-        var coords=rj.routes[0].geometry.coordinates.map(function(c){return [c[1],c[0]];});
-        routeLayer=L.polyline(coords,{color:"#3da9fc",weight:5,opacity:0.9}).addTo(map);
-        try{ map.fitBounds(routeLayer.getBounds().pad(0.2)); }catch(e){}
-        var mi=(rj.routes[0].distance/1000)*0.621371, min=Math.round(rj.routes[0].duration/60);
-        info.innerHTML="<b>🚗 "+mi.toFixed(1)+" mi · ~"+min+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+"</span>";
-      })
-      .catch(function(){
-        // Routing service unavailable — show a straight-line guide + distance so it still works
-        routeLayer=L.polyline([[me.lat,me.lng],[dlat,dlng]],{color:"#3da9fc",weight:4,opacity:0.8,dashArray:"6 8"}).addTo(map);
-        try{ map.fitBounds(routeLayer.getBounds().pad(0.3)); }catch(e){}
-        var mi=haversineMi(me.lat,me.lng,dlat,dlng);
-        info.innerHTML="<b>📍 "+mi.toFixed(1)+" mi (direct)</b> &nbsp;<span style='color:var(--muted)'>"+esc(label)+" — live road route unavailable</span>";
-      });
+    if(!loc){ if(info) info.textContent="Address not found — try a fuller address."; return; }
+    drawRouteTo(loc.lat, loc.lng, (loc.label||q).split(",").slice(0,2).join(","));
   });
 }
+// Route straight to a call (from a tapped alert, or anywhere)
+function routeToCall(id){
+  var c=callById(id); if(!c) return;
+  switchView("map");
+  if($("routeInput")) $("routeInput").value="#"+c.num+" "+c.type;
+  drawRouteTo(c.lat, c.lng, "#"+c.num+" "+c.type+" • "+c.street);
+  selectedCallId=id; renderCalls();
+}
+window.routeToCall=routeToCall;
 window.doRoute=doRoute;
 if($("routeGo")) $("routeGo").onclick=doRoute;
 if($("routeInput")) $("routeInput").addEventListener("keydown",function(e){ if(e.key==="Enter") doRoute(); });
@@ -2076,8 +2088,8 @@ function startSimulation(){
       addCallMarker(c);
       renderCalls(); renderDuty(); updateCallsBadge();
       var msg="#"+c.num+" "+c.type+" • "+c.code+" • "+c.street;
-      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+". Units respond.","p1"); playPriorityTone(1); }
-      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street,""); playPriorityTone(c.prio); }
+      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to route","p1", function(){ routeToCall(c.id); }); playPriorityTone(1); }
+      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to route","", function(){ routeToCall(c.id); }); playPriorityTone(c.prio); }
       scheduleCall();
     }, delay);
   }
@@ -2107,7 +2119,7 @@ function startSimulation(){
                times:{received:Date.now(),dispatched:Date.now()}, narrative:[{t:now(),s:"BACKUP REQUESTED by "+u.callsign}] };
       u.assignedCallId=bc.id; u.status="backup"; calls.push(bc); if(map) addCallMarker(bc);
       logEvent("🚨 "+u.callsign+" REQUESTING BACKUP — supervisor notified","backup");
-      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+".","backup");
+      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to route","backup", function(){ routeToCall(bc.id); });
       alertTone(); renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
     } else {
       logShift(u.callsign,"on break over 25 min — supervisor pinged");

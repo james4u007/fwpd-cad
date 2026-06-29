@@ -871,6 +871,7 @@ try{
 $("logoutBtn").onclick = function(){
   if(confirm("End your shift and log off?")){
     if(session) logShift(session.callsign, "ended shift");
+    stopLiveLocation();
     $("app").style.display="none";
     $("login").style.display="flex";
     units=[]; calls=[]; logEntries=[]; selectedCallId=null;
@@ -899,6 +900,7 @@ function startShift(){
     renderAll();
     startClock();
     startSimulation();
+    startLiveLocation();
     logEvent("Shift started — "+session.callsign+" ("+session.name+") logged on as "+session.type+(usedReal?" — real GPS location acquired":""), "info");
     logShift(session.callsign, "logged on duty as "+session.type);
     toast("Logged On Duty","Welcome "+session.callsign+". You are AVAILABLE.","");
@@ -942,6 +944,22 @@ function acquireLocationThen(done){
     geoLocError=err; ipFallback();   // GPS blocked (file://) → fall back to network location
   }, { enableHighAccuracy:false, timeout:7000, maximumAge:60000 });
 }
+// Live GPS tracking — continuously update the signed-in unit's position (works on https / localhost; great on mobile)
+var geoWatchId=null;
+function startLiveLocation(){
+  if(!navigator.geolocation || geoWatchId!=null) return;
+  geoWatchId=navigator.geolocation.watchPosition(function(pos){
+    var me=self(); if(!me) return;
+    me.lat=pos.coords.latitude; me.lng=pos.coords.longitude; TOWN.real=true;
+    refreshUnitMarker(me); updateEnrouteLines();
+    var t=Date.now();
+    if(!me._geoT || t-me._geoT>15000){
+      me._geoT=t;
+      queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+    }
+  }, function(){}, { enableHighAccuracy:true, maximumAge:4000, timeout:20000 });
+}
+function stopLiveLocation(){ if(geoWatchId!=null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); } geoWatchId=null; }
 
 // ============================================================
 //  SEED DATA
@@ -1907,8 +1925,8 @@ function startSimulation(){
     units.forEach(function(u){ if(!u.isSelf) moveUnit(u); });
     // self drifts slightly if available/enroute
     var me=self();
-    if((me.status==="enroute"||me.status==="backup")&&me.assignedCallId){ moveUnit(me); }
-    // otherwise your unit stays at your real location (no drifting)
+    // If live GPS is active, your unit follows your real position — don't auto-drive it to calls
+    if(geoWatchId==null && (me.status==="enroute"||me.status==="backup") && me.assignedCallId){ moveUnit(me); }
     // periodic street refresh for self
     streetRefreshTick++;
     if(streetRefreshTick%6===0){

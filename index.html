@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAD — Computer Aided Dispatch</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+:root{
+  --bg:#0b1016; --panel:#121a24; --panel2:#172230; --line:#243446;
+  --text:#e6edf3; --muted:#8da2b8; --accent:#3da9fc; --accent2:#1f6feb;
+  --p1:#ff3b3b; --p2:#ff9f1c; --p3:#2ecc71;
+  --avail:#2ecc71; --enroute:#3da9fc; --onscene:#ff9f1c; --unavail:#7a8a9a; --backup:#ff3b3b;
+  --good:#2ecc71; --shadow:0 6px 24px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:'SF Pro Text',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); overflow:hidden;
+}
+button{font-family:inherit;cursor:pointer}
+.mono{font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace}
+
+/* ---------- LOGIN ---------- */
+#login{
+  position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(1200px 600px at 50% -10%,#13243a,#070b10);
+}
+.login-card{
+  width:420px;max-width:92vw;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:28px;box-shadow:var(--shadow);
+}
+.badge{
+  width:62px;height:62px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#1f6feb,#0b3a7a);font-size:30px;margin:0 auto 12px;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.08);
+}
+.login-card h1{font-size:20px;margin:4px 0 2px;text-align:center}
+.login-card p.sub{margin:0 0 18px;text-align:center;color:var(--muted);font-size:13px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.field input,.field select{
+  width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--text);font-size:14px;outline:none;
+}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.row2{display:flex;gap:10px}
+.row2 .field{flex:1}
+.btn{
+  border:none;border-radius:9px;padding:11px 14px;font-weight:600;font-size:14px;
+  background:var(--accent2);color:#fff;width:100%;transition:filter .15s;
+}
+.btn:hover{filter:brightness(1.1)}
+.btn.secondary{background:var(--panel2);border:1px solid var(--line);color:var(--text);width:auto}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+
+/* ---------- APP LAYOUT ---------- */
+#app{display:none;height:100vh;flex-direction:column}
+#topbar{
+  display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--panel);
+  border-bottom:1px solid var(--line);min-height:58px;z-index:30;flex-wrap:nowrap;
+}
+.tb-badge{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#1f6feb,#0b3a7a);font-size:20px;flex-shrink:0}
+.tb-dept{font-weight:700;font-size:15px;line-height:1.1}
+.tb-dept small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.tb-clock{font-size:15px;color:var(--text);min-width:96px;text-align:center}
+.tb-clock small{display:block;color:var(--muted);font-size:10px;letter-spacing:.5px}
+.tb-spacer{flex:1}
+.tb-officer{text-align:right;line-height:1.2}
+.tb-officer .cs{font-weight:700;font-size:15px}
+.tb-officer .nm{color:var(--muted);font-size:12px}
+.status-pill{
+  padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;
+  color:#06121d;white-space:nowrap;
+}
+.statusbtns{display:flex;gap:6px}
+.sbtn{
+  padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--text);font-size:12px;font-weight:600;white-space:nowrap;transition:all .12s;
+}
+.sbtn:hover{border-color:var(--accent)}
+.sbtn.active{color:#06121d}
+.backup-btn{
+  background:linear-gradient(160deg,#ff5252,#b81212);border:none;color:#fff;font-weight:800;
+  padding:9px 14px;border-radius:9px;font-size:13px;letter-spacing:.3px;box-shadow:0 0 0 0 rgba(255,59,59,.6);
+}
+.backup-btn:hover{filter:brightness(1.08)}
+.backup-btn.alert{animation:pulse 1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,59,59,.55)}70%{box-shadow:0 0 0 12px rgba(255,59,59,0)}100%{box-shadow:0 0 0 0 rgba(255,59,59,0)}}
+
+#main{flex:1;display:flex;min-height:0}
+#sidebar{
+  width:74px;background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:4px;z-index:20;
+}
+.nav{
+  width:60px;height:60px;border:none;background:transparent;color:var(--muted);border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:600;
+  position:relative;transition:all .12s;
+}
+.nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9}
+.nav:hover{color:var(--text);background:var(--panel2)}
+.nav.active{color:#fff;background:var(--accent2)}
+.nav .dot{position:absolute;top:8px;right:12px;min-width:16px;height:16px;border-radius:9px;background:var(--p1);
+  color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 4px}
+.nav .dot.show{display:flex}
+#content{flex:1;position:relative;min-width:0;background:var(--bg)}
+.view{position:absolute;inset:0;display:none;overflow:hidden}
+.view.active{display:flex}
+
+/* ---------- MAP ---------- */
+#map{position:absolute;inset:0;background:#0f1620}
+.leaflet-container{background:#0f1620}
+.map-overlay{position:absolute;z-index:500;pointer-events:none}
+.ovl-card{
+  background:rgba(18,26,36,.92);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);pointer-events:auto;backdrop-filter:blur(6px);
+}
+#dutyPanel{top:14px;left:14px;width:228px;padding:12px 14px}
+#dutyPanel h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:flex;justify-content:space-between}
+#dutyPanel h3 b{color:var(--text);font-size:18px}
+.duty-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
+.duty-row .dotc{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.duty-row .lbl{flex:1;color:var(--text)}
+.duty-row .cnt{font-weight:700;font-family:'SF Mono',monospace}
+#streetPanel{bottom:20px;left:14px;padding:10px 16px;display:flex;align-items:center;gap:12px}
+#streetPanel .pin{font-size:22px}
+#streetPanel .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+#streetPanel .st{font-size:17px;font-weight:700}
+#mapLegend{bottom:20px;right:14px;padding:10px 12px;font-size:12px}
+#mapLegend .duty-row{padding:2px 0}
+.map-btn{position:absolute;z-index:500;right:14px;top:14px;display:flex;flex-direction:column;gap:8px}
+.map-btn button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(18,26,36,.92);color:var(--text);font-size:18px}
+.map-btn button:hover{border-color:var(--accent)}
+
+/* unit markers */
+.unit-marker{
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+  border:2px solid #fff;color:#06121d;font-weight:800;font-size:11px;font-family:'SF Mono',monospace;
+  box-shadow:0 2px 6px rgba(0,0,0,.5);
+}
+.unit-marker.self{border:3px solid #fff;box-shadow:0 0 0 4px rgba(61,169,252,.4),0 2px 8px rgba(0,0,0,.6)}
+.call-marker{
+  width:26px;height:34px;position:relative;display:flex;align-items:center;justify-content:center;
+  font-weight:800;color:#fff;font-size:13px;
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));
+}
+.call-marker svg{position:absolute;inset:0;width:26px;height:34px}
+.call-marker span{position:relative;z-index:2;margin-top:-4px}
+
+.leaflet-popup-content-wrapper{background:var(--panel2);color:var(--text);border-radius:10px;border:1px solid var(--line)}
+.leaflet-popup-tip{background:var(--panel2);border:1px solid var(--line)}
+.leaflet-popup-content{margin:10px 12px;font-size:13px}
+.pop h4{margin:0 0 4px;font-size:14px}
+.pop .pm{color:var(--muted);font-size:12px;margin:2px 0}
+.pop .chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#06121d}
+
+/* ---------- CALLS ---------- */
+#callsView{width:100%}
+.calls-list{width:46%;max-width:560px;min-width:340px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel)}
+.calls-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.calls-head h2{margin:0;font-size:16px;flex:1}
+.calls-head input{padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:12px;width:120px;outline:none}
+.filter-tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ftab{padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:12px;font-weight:600}
+.ftab.active{background:var(--panel2);color:var(--text);border-color:var(--accent)}
+.calls-scroll{flex:1;overflow:auto}
+.call-row{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:11px;align-items:flex-start;transition:background .1s}
+.call-row:hover{background:var(--panel2)}
+.call-row.sel{background:var(--panel2);box-shadow:inset 3px 0 0 var(--accent)}
+.prio{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#06121d;flex-shrink:0;font-size:14px}
+.call-row .cr-main{flex:1;min-width:0}
+.call-row .cr-type{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+.call-row .cr-loc{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-row .cr-meta{display:flex;gap:8px;margin-top:5px;font-size:11px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.tag{padding:2px 7px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-weight:600}
+.tag.st-active{color:var(--p1);border-color:var(--p1)}
+.tag.st-dispatched{color:var(--enroute);border-color:var(--enroute)}
+.tag.st-onscene{color:var(--onscene);border-color:var(--onscene)}
+.tag.st-cleared{color:var(--muted)}
+.cr-timer{font-family:'SF Mono',monospace}
+
+.call-detail{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.cd-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-direction:column;gap:10px;text-align:center;padding:20px}
+.cd-empty svg{width:54px;height:54px;stroke:var(--line);fill:none;stroke-width:1.5}
+.cd-actions{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.cd-actions button{padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:700;font-size:12px;display:flex;align-items:center;gap:6px}
+.cd-actions button:hover{border-color:var(--accent)}
+.cd-actions button.on{color:#06121d}
+.cd-actions .bk{background:linear-gradient(160deg,#ff5252,#b81212);border:none;color:#fff;margin-left:auto}
+.cd-body{flex:1;overflow:auto;padding:16px}
+.cd-title{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cd-title .prio{width:42px;height:42px;font-size:18px;border-radius:10px}
+.cd-title h2{margin:0;font-size:20px}
+.cd-title .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.cd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.cd-cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cd-cell .k{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:3px}
+.cd-cell .v{font-size:14px;font-weight:600}
+.cd-section{margin-bottom:16px}
+.cd-section h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.cd-section h3 .add{margin-left:auto;font-size:11px;color:var(--accent);cursor:pointer}
+.unit-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:20px;background:var(--panel);border:1px solid var(--line);font-size:13px;margin:0 6px 6px 0}
+.unit-chip .ud{width:9px;height:9px;border-radius:50%}
+.unit-chip b{font-family:'SF Mono',monospace}
+.narrative{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden}
+.narr-log{max-height:230px;overflow:auto;padding:10px 12px}
+.narr-item{font-size:13px;padding:5px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px}
+.narr-item:last-child{border-bottom:none}
+.narr-item .t{color:var(--muted);font-family:'SF Mono',monospace;font-size:11px;flex-shrink:0;width:62px}
+.narr-input{display:flex;border-top:1px solid var(--line)}
+.narr-input input{flex:1;border:none;background:var(--panel2);color:var(--text);padding:10px 12px;outline:none;font-size:13px}
+.narr-input button{border:none;background:var(--accent2);color:#fff;padding:0 16px;font-weight:600}
+
+/* ---------- UNITS / LOG generic table ---------- */
+.simple-view{flex-direction:column;overflow:hidden}
+.sv-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;background:var(--panel)}
+.sv-head h2{margin:0;font-size:17px;flex:1}
+.sv-scroll{flex:1;overflow:auto;padding:8px 18px 18px}
+table.roster{width:100%;border-collapse:collapse;font-size:13px}
+table.roster th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:10px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+table.roster td{padding:10px 8px;border-bottom:1px solid var(--line)}
+table.roster tr:hover td{background:var(--panel)}
+.sdot{display:inline-flex;align-items:center;gap:7px}
+.sdot i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.log-item{display:flex;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;align-items:flex-start}
+.log-item .lt{color:var(--muted);font-family:'SF Mono',monospace;font-size:11px;flex-shrink:0;width:74px}
+.log-item .li{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.log-item.prio b{color:var(--p1)}
+.log-item .lx b{font-weight:700}
+
+/* toast / dispatch alert */
+#toasts{position:fixed;bottom:18px;right:18px;z-index:3000;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:12px 14px;width:320px;box-shadow:var(--shadow);animation:slidein .25s}
+.toast.p1{border-left-color:var(--p1)}
+.toast.backup{border-left-color:var(--p1);background:#2a1414}
+.toast h4{margin:0 0 3px;font-size:13px;display:flex;align-items:center;gap:8px}
+.toast p{margin:0;font-size:12px;color:var(--muted)}
+.toast .x{position:absolute}
+@keyframes slidein{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:440px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:var(--shadow)}
+.modal-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.modal-h h3{margin:0;font-size:16px;flex:1}
+.modal-h .x{background:none;border:none;color:var(--muted);font-size:20px}
+.modal-b{padding:18px}
+.modal-b .field{margin-bottom:12px}
+.codegrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.codegrid .c{display:flex;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.codegrid .c b{font-family:'SF Mono',monospace;color:var(--accent);min-width:56px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;padding:9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:700}
+.seg button.on{color:#06121d}
+.hint{font-size:11px;color:var(--muted);margin-top:-4px;margin-bottom:10px}
+.leaflet-bar a{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.leaflet-bar a:hover{background:var(--panel)}
+
+/* ---------- BOLO ---------- */
+.sv-head .sbtn{flex-shrink:0}
+.plate-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.plate-box h3{margin:0 0 4px;font-size:14px;display:flex;align-items:center;gap:8px}
+.plate-box .hint{margin:0 0 10px}
+.plate-row{display:flex;gap:8px}
+.plate-row input{flex:1;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:18px;letter-spacing:3px;font-family:'SF Mono',monospace;text-transform:uppercase;outline:none}
+.plate-row input:focus{border-color:var(--accent)}
+.plate-row button{padding:0 18px;border-radius:9px;border:none;background:var(--accent2);color:#fff;font-weight:700}
+.plate-result{margin-top:12px;font-size:13px;line-height:1.5}
+.plate-result .neutral{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px}
+.plate-result .hit{background:#2a1414;border:1px solid var(--p1);border-radius:9px;padding:12px;box-shadow:0 0 18px rgba(255,59,59,.35)}
+.plate-result .hit b{color:#ff6b6b}
+.bolo-card{background:linear-gradient(180deg,#241317,#1a1014);border:1.5px solid var(--p1);border-radius:14px;margin-bottom:16px;overflow:hidden;box-shadow:0 0 20px rgba(255,59,59,.28),0 0 0 1px rgba(255,59,59,.22);animation:boloGlow 2.6s ease-in-out infinite}
+@keyframes boloGlow{0%,100%{box-shadow:0 0 14px rgba(255,59,59,.2),0 0 0 1px rgba(255,59,59,.18)}50%{box-shadow:0 0 32px rgba(255,59,59,.5),0 0 0 1px rgba(255,59,59,.4)}}
+.bolo-hd{display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(255,59,59,.14);border-bottom:1px solid rgba(255,59,59,.35)}
+.bolo-hd .lbl{font-weight:800;letter-spacing:1.5px;color:#ff6b6b;font-size:14px}
+.bolo-hd .num{margin-left:auto;font-family:'SF Mono',monospace;color:var(--muted);font-size:12px}
+.bolo-bd{padding:14px 16px}
+.bolo-veh{font-size:20px;font-weight:800;margin-bottom:6px}
+.bolo-plate{display:inline-block;font-family:'SF Mono',monospace;font-size:16px;letter-spacing:2px;background:#0e1620;border:1px solid var(--line);border-radius:6px;padding:3px 12px;margin-bottom:12px}
+.bolo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-bottom:12px}
+.bolo-grid .k{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.bolo-grid .v{font-size:14px;font-weight:600}
+.bolo-desc{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;margin-bottom:12px;white-space:pre-wrap}
+.bolo-flags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.bolo-flag{background:var(--p1);color:#fff;font-weight:800;font-size:11px;padding:4px 10px;border-radius:6px;letter-spacing:.5px}
+.bolo-foot{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.bolo-foot button{margin-left:auto;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:600}
+.bolo-foot button:hover{border-color:var(--p1);color:#ff6b6b}
+textarea.fld{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;outline:none;font-family:inherit;resize:vertical;min-height:62px}
+textarea.fld:focus{border-color:var(--accent)}
+
+/* ---------- RECORDS / RMS ---------- */
+.rep-row{padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:12px;align-items:center;transition:background .1s}
+.rep-row:hover{background:var(--panel)}
+.rep-ic{width:36px;height:36px;border-radius:9px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.rep-row .rm{flex:1;min-width:0}
+.rep-row .rt{font-weight:700;font-size:14px}
+.rep-row .rs{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-badge{padding:4px 9px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:.4px;white-space:nowrap}
+.rb-draft{background:#2b3744;color:#cfe0f5}
+.rb-review{background:rgba(255,159,28,.16);color:#ffb84d;border:1px solid rgba(255,159,28,.6)}
+.rb-approved{background:rgba(46,204,113,.16);color:#5fe39a;border:1px solid rgba(46,204,113,.6)}
+.rb-returned{background:rgba(255,59,59,.16);color:#ff7a7a;border:1px solid rgba(255,59,59,.6)}
+.modal-b input[type=datetime-local]{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;outline:none}
+input[type=range]{accent-color:var(--accent);width:100%;height:6px;margin-top:4px}
+input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#22303f;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<!-- ===================== SITE PASSWORD GATE ===================== -->
+<div id="siteGate" style="position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#13243a,#070b10);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="width:360px;max-width:92vw;background:#121a24;border:1px solid #243446;border-radius:16px;padding:28px;box-shadow:0 6px 24px rgba(0,0,0,.45);text-align:center;color:#e6edf3">
+    <div style="font-size:34px;margin-bottom:8px">🔒</div>
+    <h2 style="margin:0 0 4px;font-size:18px">Restricted Access</h2>
+    <p style="margin:0 0 16px;color:#8da2b8;font-size:13px">Enter the site password to continue.</p>
+    <input id="gatePw" type="password" placeholder="Password" autocomplete="off" style="width:100%;padding:11px 12px;border-radius:9px;border:1px solid #243446;background:#172230;color:#e6edf3;font-size:14px;outline:none;margin-bottom:10px">
+    <div id="gateErr" style="color:#ff3b3b;font-size:12px;margin-bottom:10px;display:none">Incorrect password.</div>
+    <button id="gateGo" style="width:100%;padding:11px;border:none;border-radius:9px;background:#1f6feb;color:#fff;font-weight:600;font-size:14px;cursor:pointer">Enter</button>
+  </div>
+</div>
+<script>
+(function(){
+  var SITE_PW="hank123", g=document.getElementById("siteGate");
+  try{ if(sessionStorage.getItem("cad_gate")==="1"){ g.style.display="none"; return; } }catch(e){}
+  function check(){
+    if(document.getElementById("gatePw").value===SITE_PW){ try{sessionStorage.setItem("cad_gate","1");}catch(e){} g.style.display="none"; }
+    else { document.getElementById("gateErr").style.display="block"; }
+  }
+  document.getElementById("gateGo").onclick=check;
+  document.getElementById("gatePw").addEventListener("keydown",function(e){ if(e.key==="Enter") check(); });
+  setTimeout(function(){ try{document.getElementById("gatePw").focus();}catch(e){} },50);
+})();
+</script>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <div class="login-card">
+    <div class="badge"><svg viewBox="0 0 64 64" style="width:48px;height:48px"><circle cx="32" cy="32" r="30" fill="#0b2f63" stroke="#ffcf3f" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#9db8de" stroke-width="1" opacity="0.5"/><path d="M32 10 L36.9 24.2 L52 24.5 L40 33.6 L44.3 48 L32 39.4 L19.7 48 L24 33.6 L12 24.5 L27.1 24.2 Z" fill="#ffcf3f" stroke="#c9a836" stroke-width="1"/></svg></div>
+    <h1>Computer Aided Dispatch</h1>
+    <p class="sub">Fort Worth Police — Unit Login</p>
+    <div class="field">
+      <label>Department</label>
+      <input id="lg-dept" value="Fort Worth Police" readonly>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Unit / Call Sign</label>
+        <select id="lg-unit">
+          <option value="J-100">J-100</option>
+          <option value="J-101">J-101</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Badge #</label>
+        <input id="lg-badge" value="S-100" readonly>
+      </div>
+    </div>
+    <div class="field">
+      <label>Officer Name</label>
+      <input id="lg-name" value="J. O'Day" readonly>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="lg-pw" type="password" placeholder="Unit password">
+    </div>
+    <div class="field">
+      <label>Unit Type</label>
+      <select id="lg-type">
+        <option value="Patrol">Patrol</option>
+        <option value="Supervisor">Supervisor</option>
+        <option value="NPO">NPO (Neighborhood Police Officer)</option>
+        <option value="Motor">Motor</option>
+        <option value="K-9">K-9</option>
+        <option value="CID">CID</option>
+        <option value="Air">Air</option>
+        <option value="SWAT">SWAT</option>
+        <option value="SWAT TacMed">SWAT TacMed</option>
+      </select>
+    </div>
+    <div id="lg-err" style="color:var(--p1);font-size:12px;margin-bottom:8px;display:none"></div>
+    <button class="btn" id="lg-go">Log On Duty</button>
+    <p class="sub" style="margin-top:12px;margin-bottom:0;font-size:11px">Starts your shift as Available. Demo data is simulated.</p>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="tb-badge"><svg viewBox="0 0 64 64" style="width:32px;height:32px"><circle cx="32" cy="32" r="30" fill="#0b2f63" stroke="#ffcf3f" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#9db8de" stroke-width="1" opacity="0.5"/><path d="M32 10 L36.9 24.2 L52 24.5 L40 33.6 L44.3 48 L32 39.4 L19.7 48 L24 33.6 L12 24.5 L27.1 24.2 Z" fill="#ffcf3f" stroke="#c9a836" stroke-width="1"/></svg></div>
+    <div class="tb-dept" id="tbDept">Police Dept<small id="tbDeptSub">Computer Aided Dispatch</small></div>
+    <div class="tb-clock"><span id="tbTime">--:--:--</span><small id="tbDate">———</small></div>
+    <div class="tb-spacer"></div>
+    <div class="statusbtns" id="selfStatusBtns"></div>
+    <button class="backup-btn" id="backupBtn">🚨 REQUEST BACKUP</button>
+    <div style="width:1px;height:34px;background:var(--line)"></div>
+    <div class="tb-officer">
+      <div class="cs" id="tbCs">A-12</div>
+      <div class="nm" id="tbNm">Officer</div>
+    </div>
+    <span class="status-pill" id="tbStatus">AVAILABLE</span>
+    <button class="sbtn" id="audioBtn" title="Alert volume">🔊</button>
+    <button class="sbtn" id="logoutBtn" title="End shift">⎋</button>
+  </div>
+
+  <div id="main">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <button class="nav active" data-view="map">
+        <svg viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        Map
+      </button>
+      <button class="nav" data-view="calls">
+        <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13 1.05.36 2.07.7 3a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.13-1.13a2 2 0 0 1 2.11-.45c.93.34 1.95.57 3 .7A2 2 0 0 1 22 16.92z"/></svg>
+        Calls
+        <span class="dot" id="callsDot">0</span>
+      </button>
+      <button class="nav" data-view="units">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Units
+      </button>
+      <button class="nav" data-view="bolo">
+        <svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        BOLO
+        <span class="dot" id="boloDot">0</span>
+      </button>
+      <button class="nav" data-view="records">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        Records
+        <span class="dot" id="recDot">0</span>
+      </button>
+      <button class="nav" data-view="alpr">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M2 7l3-4h14l3 4"/><circle cx="12" cy="14" r="3"/></svg>
+        ALPR
+      </button>
+      <button class="nav" data-view="log">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Log
+      </button>
+      <button class="nav" data-view="shift">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        On Duty
+      </button>
+      <div style="flex:1"></div>
+      <button class="nav" id="codesBtn">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Codes
+      </button>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content">
+      <!-- MAP VIEW -->
+      <div class="view active" id="mapView">
+        <div id="map"></div>
+        <div class="map-overlay ovl-card" id="dutyPanel">
+          <h3>Units On Duty <b id="dpTotal">0</b></h3>
+          <div id="dutyRows"></div>
+          <div style="border-top:1px solid var(--line);margin-top:9px;padding-top:8px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Patrol Divisions</div>
+            <div id="jdRows"></div>
+          </div>
+        </div>
+        <div class="map-overlay ovl-card" id="streetPanel">
+          <div class="pin">📍</div>
+          <div>
+            <div class="lbl">Your Location</div>
+            <div class="st" id="myStreet">Locating…</div>
+          </div>
+        </div>
+        <div class="map-overlay ovl-card" id="mapLegend">
+          <div class="duty-row"><span class="dotc" style="background:var(--avail)"></span><span class="lbl">Available</span></div>
+          <div class="duty-row"><span class="dotc" style="background:var(--enroute)"></span><span class="lbl">En Route</span></div>
+          <div class="duty-row"><span class="dotc" style="background:var(--onscene)"></span><span class="lbl">On Scene</span></div>
+          <div class="duty-row"><span class="dotc" style="background:var(--backup)"></span><span class="lbl">Backup / Panic</span></div>
+          <div class="duty-row"><span class="dotc" style="background:var(--unavail)"></span><span class="lbl">Unavailable</span></div>
+        </div>
+        <div class="map-btn">
+          <button id="recenterBtn" title="Recenter on me / retry GPS">◎</button>
+          <button id="setLocBtn" title="Set my location by address">📍</button>
+          <button id="callsToggleBtn" title="Toggle call pins">📞</button>
+        </div>
+      </div>
+
+      <!-- CALLS VIEW -->
+      <div class="view" id="callsView">
+        <div class="calls-list">
+          <div class="calls-head">
+            <h2>Active Calls</h2>
+            <input id="callSearch" placeholder="Search…">
+            <button class="sbtn" id="newCallBtn" title="Self-initiate / create call">＋</button>
+          </div>
+          <div class="filter-tabs" id="callFilters">
+            <button class="ftab active" data-f="all">All</button>
+            <button class="ftab" data-f="1">P1</button>
+            <button class="ftab" data-f="2">P2</button>
+            <button class="ftab" data-f="3">P3</button>
+            <button class="ftab" data-f="mine">My Calls</button>
+            <button class="ftab" data-f="unassigned">Unassigned</button>
+            <span style="width:1px;background:var(--line);margin:2px 2px"></span>
+            <button class="ftab" data-f="h1" title="Cleared in the last hour">⏱ Past 1h</button>
+            <button class="ftab" data-f="h5" title="Cleared in the last 5 hours">⏱ Past 5h</button>
+            <button class="ftab" data-f="h12" title="Cleared in the last 12 hours">⏱ Past 12h</button>
+          </div>
+          <div class="calls-scroll" id="callsScroll"></div>
+        </div>
+        <div class="call-detail" id="callDetail">
+          <div class="cd-empty" id="cdEmpty">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <div>Select a call to view details<br>and update your status.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UNITS VIEW -->
+      <div class="view simple-view" id="unitsView">
+        <div class="sv-head"><h2>Unit Roster</h2><span class="tag" id="unitsCount">0 on duty</span></div>
+        <div class="sv-scroll">
+          <table class="roster">
+            <thead><tr><th>Call Sign</th><th>Officer</th><th>Type</th><th>Status</th><th>Location</th><th>Assignment</th></tr></thead>
+            <tbody id="rosterBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BOLO VIEW -->
+      <div class="view simple-view" id="boloView">
+        <div class="sv-head"><h2>BOLO Board</h2><span class="tag" id="boloCount">0 active</span><button class="sbtn" id="addBoloBtn">＋ Add BOLO</button></div>
+        <div class="sv-scroll">
+          <div class="plate-box">
+            <h3>🔍 License Plate / Registration Lookup</h3>
+            <p class="hint">Checks against active BOLOs. Live state / NCIC-TCIC database is not connected (demo).</p>
+            <div class="plate-row"><input id="plateInput" placeholder="ENTER PLATE" maxlength="10"><button id="plateRunBtn">Run Plate</button></div>
+            <div class="plate-result" id="plateResult"></div>
+          </div>
+          <div id="boloCards"></div>
+        </div>
+      </div>
+
+      <!-- RECORDS VIEW -->
+      <div class="view simple-view" id="recordsView">
+        <div class="sv-head"><h2>Records (RMS)</h2><span class="tag" id="recCount">0 reports</span><span class="tag" id="recRole" style="display:none;color:var(--accent);border-color:var(--accent)">SUPERVISOR — REVIEW ENABLED</span><button class="sbtn" id="newReportBtn">＋ New Report</button></div>
+        <div class="filter-tabs" id="recFilters">
+          <button class="ftab active" data-rf="all">All</button>
+          <button class="ftab" data-rf="draft">Drafts</button>
+          <button class="ftab" data-rf="review">Pending Review</button>
+          <button class="ftab" data-rf="approved">Approved</button>
+          <button class="ftab" data-rf="returned">Returned</button>
+        </div>
+        <div class="sv-scroll" id="reportCards"></div>
+      </div>
+
+      <!-- ALPR / RECORDS LOOKUP VIEW -->
+      <div class="view simple-view" id="alprView">
+        <div class="sv-head"><h2>ALPR / Records Lookup</h2><span class="tag">DEMO — not connected to live state / NCIC</span></div>
+        <div class="sv-scroll">
+          <div class="plate-box">
+            <h3>👤 Driver Lookup</h3>
+            <p class="hint">Search a driver by name to pull DL, registered vehicles, prior infractions &amp; calls. (Demo data only.)</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input id="dlFirst" placeholder="First name" style="flex:1;min-width:130px;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;outline:none">
+              <input id="dlLast" placeholder="Last name" style="flex:1;min-width:130px;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;outline:none">
+              <button id="dlGo" style="padding:0 20px;border-radius:9px;border:none;background:var(--accent2);color:#fff;font-weight:700">Search</button>
+            </div>
+          </div>
+          <div class="plate-box">
+            <h3>🔍 Plate / ALPR Lookup</h3>
+            <p class="hint">Reads a plate against demo registrations &amp; active BOLOs.</p>
+            <div class="plate-row"><input id="alprPlate" placeholder="ENTER PLATE" maxlength="10"><button id="alprPlateGo">Run Plate</button></div>
+            <div class="plate-result" id="alprPlateResult"></div>
+          </div>
+          <div id="alprResults"></div>
+        </div>
+      </div>
+
+      <!-- LOG VIEW -->
+      <div class="view simple-view" id="logView">
+        <div class="sv-head"><h2>Dispatch Log</h2><button class="sbtn" id="clearLogBtn">Clear</button></div>
+        <div class="sv-scroll" id="logScroll" style="padding:0 8px"></div>
+      </div>
+
+      <!-- ON DUTY / SHIFT TIMER VIEW -->
+      <div class="view simple-view" id="shiftView">
+        <div class="sv-head"><h2>On Duty</h2></div>
+        <div class="sv-scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px">
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Time On Duty</div>
+          <div id="shiftElapsed" class="mono" style="font-size:68px;font-weight:800;line-height:1;color:var(--text)">00:00:00</div>
+          <div id="shiftMeta" style="color:var(--muted);font-size:14px"></div>
+          <div style="width:82%;max-width:460px;margin-top:18px">
+            <div style="height:22px;background:#22303f;border-radius:12px;overflow:hidden;border:1px solid var(--line)">
+              <div id="shiftBar" style="height:100%;width:0%;background:linear-gradient(90deg,#1e9e57,#2ecc71,#86efac);transition:width .6s"></div>
+            </div>
+            <div id="shiftBarLbl" style="margin-top:10px;color:var(--muted);font-size:13px">0% of 10-hour shift</div>
+          </div>
+          <div style="width:92%;max-width:600px;margin-top:26px;text-align:left">
+            <div id="shiftLogsTitle" style="font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px">Your Shift Log</div>
+            <div id="shiftLogs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ============================================================
+   POLICE CAD — single file demo
+   ============================================================ */
+"use strict";
+
+// ---------- CONFIG ----------
+var TOWN = { lat: 32.7555, lng: -97.3308, zoom: 14, name: "Fort Worth" }; // Fort Worth, TX center (real streets)
+var STATUS = {
+  available:  { label:"Available",  color:"var(--avail)",   hex:"#2ecc71" },
+  enroute:    { label:"En Route",   color:"var(--enroute)", hex:"#3da9fc" },
+  onscene:    { label:"On Scene",   color:"var(--onscene)", hex:"#ff9f1c" },
+  backup:     { label:"Backup",     color:"var(--backup)",  hex:"#ff3b3b" },
+  "break":    { label:"On Break",   color:"var(--p2)",      hex:"#b06be0" },
+  unavailable:{ label:"Unavailable",color:"var(--unavail)", hex:"#7a8a9a" }
+};
+var PRIOCOLOR = {1:"#ff3b3b",2:"#ff9f1c",3:"#2ecc71"};
+var CALL_TYPES = [
+  {t:"Traffic Stop",p:3,code:"Sig 31"},{t:"Suspicious Person",p:3,code:"Sig 38"},
+  {t:"Welfare Check",p:3,code:"Sig 64"},{t:"Noise Complaint",p:3,code:"Sig 14"},
+  {t:"Parking Violation",p:3,code:"Sig 30"},{t:"Theft / Larceny",p:2,code:"Sig 40"},
+  {t:"Vehicle Accident",p:2,code:"Sig 2"},{t:"Domestic Disturbance",p:2,code:"Sig 15"},
+  {t:"Burglary in Progress",p:1,code:"Sig 10"},{t:"Assault",p:1,code:"Sig 4"},
+  {t:"Armed Robbery",p:1,code:"Sig 36"},{t:"Shots Fired",p:1,code:"Sig 77"},
+  {t:"Medical Emergency",p:1,code:"Sig 27"},{t:"Pursuit",p:1,code:"Sig 60"},
+  {t:"Fire / Hazard",p:1,code:"Sig 25"},{t:"Disturbance",p:2,code:"Sig 14"}
+];
+var FALLBACK_STREETS = ["W 7th St","Main St","Houston St","Throckmorton St","Commerce St",
+  "Camp Bowie Blvd","University Dr","Hemphill St","W Berry St","E Rosedale St","Lancaster Ave",
+  "W Belknap St","Jacksboro Hwy","White Settlement Rd","Hulen St","Bryant Irvin Rd",
+  "Forest Park Blvd","Vickery Blvd","Magnolia Ave","Henderson St","8th Ave","Riverside Dr"];
+var CALLERS = ["Anonymous","RP on scene","Business owner","Passerby","Resident","911 Hangup","Alarm Company","Witness"];
+var FIRST=["Mike","Dana","Carlos","Sam","Riley","Tyler","Grace","Omar","Lena","Drew","Pat","Jordan","Cole","Mia","Beau","Nia"];
+var LAST=["Reyes","Hart","Boone","Calder","Nash","Pope","Vance","Diaz","Frost","Webb","Quinn","Stone","Tran","Mercer","Pike"];
+
+// ---------- STATE ----------
+var session = null;
+var units = [];          // all units including self
+var calls = [];          // all calls
+var logEntries = [];
+var selectedCallId = null;
+var shiftStart = 0, pausedTotal = 0, pauseStart = 0;
+var shiftLogs = [];
+var callFilter = "all";
+var callSearch = "";
+var showCallPins = true;
+var map, selfMarker;
+var unitMarkers = {}, callMarkers = {};
+var nextCallNum = 1041;
+var geoQueue = [], geoBusy = false, lastGeo = 0;
+
+// ---------- UTIL ----------
+function $(id){ return document.getElementById(id); }
+function el(tag,cls,html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function now(){ return new Date(); }
+function hhmm(d){ return d.toTimeString().slice(0,5); }
+function hhmmss(d){ return d.toTimeString().slice(0,8); }
+function rand(a){ return a[Math.floor(Math.random()*a.length)]; }
+function randf(min,max){ return min+Math.random()*(max-min); }
+function elapsed(ms){ var s=Math.floor((Date.now()-ms)/1000); var m=Math.floor(s/60); s=s%60; return (m<10?"0":"")+m+":"+(s<10?"0":"")+s; }
+function officerName(){ return rand(FIRST).charAt(0)+". "+rand(LAST); }
+
+// ---------- GEOCODE (reverse, throttled, with fallback) ----------
+function queueGeocode(obj){ // obj: {lat,lng, set:function(street)}
+  geoQueue.push(obj);
+  pumpGeocode();
+}
+function pumpGeocode(){
+  if(geoBusy) return;
+  if(geoQueue.length===0) return;
+  var wait = Math.max(0, 1100-(Date.now()-lastGeo));
+  geoBusy = true;
+  setTimeout(function(){
+    var job = geoQueue.shift();
+    lastGeo = Date.now();
+    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&lat="+job.lat+"&lon="+job.lng;
+    fetch(url,{headers:{"Accept":"application/json"}}).then(function(r){return r.json();}).then(function(j){
+      var a=j.address||{};
+      var street = a.road||a.pedestrian||a.cycleway||a.footway||a.neighbourhood||a.suburb||a.hamlet||(j.name)||null;
+      job.set(street||rand(FALLBACK_STREETS));
+    }).catch(function(){
+      job.set(rand(FALLBACK_STREETS));
+    }).finally(function(){
+      geoBusy=false; pumpGeocode();
+    });
+  }, wait);
+}
+
+// ---------- LOGGING / TOASTS ----------
+function logEvent(text, kind){ // kind: info, call, status, backup, prio
+  logEntries.unshift({ id:uid(), t:now(), text:text, kind:kind||"info" });
+  if(logEntries.length>300) logEntries.pop();
+  if($("logView") && $("logView").classList.contains("active")) renderLog();
+}
+function toast(title, body, cls){
+  var t = el("div","toast"+(cls?" "+cls:""));
+  t.innerHTML = "<h4>"+title+"</h4><p>"+body+"</p>";
+  $("toasts").appendChild(t);
+  setTimeout(function(){ t.style.transition="opacity .4s"; t.style.opacity="0"; setTimeout(function(){ t.remove(); },400); }, 5200);
+}
+// simple WebAudio beep
+var actx=null;
+// Per-priority alert volume. P1 is LOCKED at full volume and cannot be lowered.
+var alertVol={1:1,2:0.6,3:0.35};
+try{ var _av=JSON.parse(localStorage.getItem("cad_alertvol")||"null"); if(_av){ if(_av[2]!=null)alertVol[2]=_av[2]; if(_av[3]!=null)alertVol[3]=_av[3]; } }catch(e){}
+alertVol[1]=1;
+function saveAlertVol(){ try{ localStorage.setItem("cad_alertvol", JSON.stringify(alertVol)); }catch(e){} }
+function beep(freq,dur,type,vol){
+  var g0=(vol==null?0.25:vol);
+  if(g0<=0.001) return; // muted
+  try{
+    if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+    var o=actx.createOscillator(), g=actx.createGain();
+    o.type=type||"sine"; o.frequency.value=freq||880;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(0.0001,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(g0,actx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+(dur||0.18));
+    o.start(); o.stop(actx.currentTime+(dur||0.18));
+  }catch(e){}
+}
+function alertTone(){ // P1 / backup — urgent 4-pulse alarm, fixed full volume
+  beep(1040,0.13,"square",0.55);
+  setTimeout(function(){beep(760,0.13,"square",0.55);},150);
+  setTimeout(function(){beep(1040,0.13,"square",0.55);},300);
+  setTimeout(function(){beep(600,0.26,"square",0.55);},450);
+}
+function playPriorityTone(prio){
+  if(prio===1){ alertTone(); return; }               // Priority 1 — always full volume
+  var v=alertVol[prio]; if(v==null||v<=0) return;     // P2/P3 honor the slider (0 = muted)
+  if(prio===2){ // urgent rising two-tone
+    beep(620,0.15,"sawtooth",0.5*v);
+    setTimeout(function(){beep(860,0.20,"sawtooth",0.5*v);},160);
+  } else { // P3 — low, ominous, more intimidating
+    beep(300,0.20,"sawtooth",0.5*v);
+    setTimeout(function(){beep(225,0.30,"sawtooth",0.5*v);},200);
+  }
+}
+function testTone(p){ if(p===1) alertTone(); else playPriorityTone(p); }
+window.testTone=testTone;
+
+// ---------- SELF UNIT helpers ----------
+function self(){ return units[0]; }
+function dutyElapsedMs(){
+  if(!shiftStart) return 0;
+  var paused = pausedTotal + (pauseStart ? (Date.now()-pauseStart) : 0);
+  return Math.max(0, (Date.now()-shiftStart) - paused);
+}
+function setSelfStatus(s, silent){
+  var u=self(); if(!u) return;
+  var prev=u.status;
+  var wasPaused=(prev==="unavailable"||prev==="break"), willPause=(s==="unavailable"||s==="break");
+  if(!wasPaused && willPause){ pauseStart=Date.now(); }                                   // shift clock pauses
+  else if(wasPaused && !willPause){ if(pauseStart){ pausedTotal+=Date.now()-pauseStart; pauseStart=0; } }
+  if(prev!==s){
+    if(s==="break"){ u.breakStart=Date.now(); u.breakPinged=false; logShift(u.callsign,"went on break"); }
+    else if(prev==="break"){ u.breakStart=0; logShift(u.callsign,"returned from break"); }
+    if(s==="unavailable"){ logShift(u.callsign,"went unavailable (out of service)"); }
+    else if(prev==="unavailable"){ logShift(u.callsign,"back in service"); }
+  }
+  u.status=s;
+  renderTopStatus(); renderDuty(); refreshUnitMarker(u); renderRoster();
+  renderCallDetail();
+  if($("shiftView") && $("shiftView").classList.contains("active")) renderShift();
+  if(!silent) logEvent(u.callsign+" is now "+STATUS[s].label.toUpperCase(), "status");
+}
+
+// ============================================================
+//  LOGIN
+// ============================================================
+$("lg-unit").onchange = function(){ $("lg-badge").value = (this.value==="J-101") ? "S-101" : "S-100"; };
+var UNIT_PW = { "J-100":"hank", "J-101":"Off101" };
+$("lg-go").onclick = function(){
+  var cs = $("lg-unit").value;                       // restricted to J-100 / J-101
+  var pw = $("lg-pw").value;
+  if(UNIT_PW[cs] && pw !== UNIT_PW[cs]){ var le=$("lg-err"); le.textContent="Incorrect password for "+cs+"."; le.style.display="block"; return; }
+  var badge = (cs==="J-101") ? "S-101" : "S-100";    // S-100 / S-101
+  var nm = "J. O'Day";
+  var type = $("lg-type").value;                      // Patrol / CID / Air / SWAT / SWAT TacMed
+  var dept = "Fort Worth Police";
+  session = { callsign:cs, name:nm, badge:badge, type:type, dept:dept };
+  try{ localStorage.setItem("cad_session", JSON.stringify(session)); }catch(e){}
+  startShift();
+};
+// prefill from last session (only unit + type are user-selectable)
+try{
+  var saved = JSON.parse(localStorage.getItem("cad_session")||"null");
+  if(saved){
+    if(saved.callsign==="J-100"||saved.callsign==="J-101"){ $("lg-unit").value=saved.callsign; $("lg-badge").value=(saved.callsign==="J-101")?"S-101":"S-100"; }
+    if(saved.type && $("lg-type").querySelector('option[value="'+saved.type+'"]')) $("lg-type").value=saved.type;
+  }
+}catch(e){}
+
+$("logoutBtn").onclick = function(){
+  if(confirm("End your shift and log off?")){
+    if(session) logShift(session.callsign, "ended shift");
+    $("app").style.display="none";
+    $("login").style.display="flex";
+    units=[]; calls=[]; logEntries=[]; selectedCallId=null;
+    if(map){ map.remove(); map=null; }
+    unitMarkers={}; callMarkers={};
+  }
+};
+
+function startShift(){
+  $("login").style.display="none";
+  $("app").style.display="flex";
+  shiftStart=Date.now(); pausedTotal=0; pauseStart=0;
+  try{ shiftLogs=JSON.parse(localStorage.getItem("cad_shiftlogs")||"[]"); }catch(e){ shiftLogs=[]; }
+  // top bar
+  $("tbDept").childNodes[0].nodeValue = session.dept;
+  $("tbDeptSub").textContent = "CAD • Mobile Data Terminal";
+  $("tbCs").textContent = session.callsign;
+  $("tbNm").textContent = "#"+session.badge+" "+session.name;
+
+  buildSelfStatusButtons();
+  $("myStreet").textContent="Acquiring GPS…";
+  acquireLocationThen(function(usedReal){
+    seedUnits();
+    seedCalls();
+    initMap();
+    renderAll();
+    startClock();
+    startSimulation();
+    logEvent("Shift started — "+session.callsign+" ("+session.name+") logged on as "+session.type+(usedReal?" — real GPS location acquired":""), "info");
+    logShift(session.callsign, "logged on duty as "+session.type);
+    toast("Logged On Duty","Welcome "+session.callsign+". You are AVAILABLE.","");
+    if(usedReal && TOWN.approx) toast("📍 Location Found","Approximate location from your network"+(TOWN.place?(": "+TOWN.place):"")+". For pinpoint GPS, use the launcher & click Allow, or set your exact address with the 📍 button.","");
+    else if(usedReal) toast("📍 GPS Locked","Map centered on your exact location.","");
+    else toast("📍 Location Unavailable","Couldn't reach a location service. Use the 📍 button to type your address.","");
+  });
+}
+var geoLocError=null;
+function acquireLocationThen(done){
+  geoLocError=null;
+  // 2) Network/IP location — works with NO permission and even from a plain file:// page
+  function ipApi(){
+    fetch("https://ipapi.co/json/").then(function(r){return r.json();}).then(function(j){
+      if(j && j.latitude && j.longitude){
+        TOWN.lat=parseFloat(j.latitude); TOWN.lng=parseFloat(j.longitude); TOWN.zoom=14; TOWN.real=true; TOWN.approx=true;
+        TOWN.place=(j.city?(j.city+(j.region?(", "+j.region):"")):"");
+        done(true);
+      } else done(false);
+    }).catch(function(){ done(false); });
+  }
+  function ipFallback(){
+    fetch("https://ipwho.is/").then(function(r){return r.json();}).then(function(j){
+      if(j && j.success!==false && j.latitude && j.longitude){
+        TOWN.lat=j.latitude; TOWN.lng=j.longitude; TOWN.zoom=14; TOWN.real=true; TOWN.approx=true;
+        TOWN.place=(j.city?(j.city+(j.region?(", "+j.region):"")):"");
+        done(true);
+      } else ipApi();
+    }).catch(function(){ ipApi(); });
+  }
+  // 1) Precise browser GPS — only works on https/localhost (e.g. via the launcher)
+  if(!navigator.geolocation){ ipFallback(); return; }
+  var finished=false;
+  var to=setTimeout(function(){ if(!finished){ finished=true; ipFallback(); } }, 8000);
+  navigator.geolocation.getCurrentPosition(function(pos){
+    if(finished) return; finished=true; clearTimeout(to);
+    TOWN.lat=pos.coords.latitude; TOWN.lng=pos.coords.longitude; TOWN.zoom=15; TOWN.real=true; TOWN.approx=false;
+    done(true);
+  }, function(err){
+    if(finished) return; finished=true; clearTimeout(to);
+    geoLocError=err; ipFallback();   // GPS blocked (file://) → fall back to network location
+  }, { enableHighAccuracy:false, timeout:7000, maximumAge:60000 });
+}
+
+// ============================================================
+//  SEED DATA
+// ============================================================
+function randPoint(spread){
+  spread = spread||0.022;
+  return { lat: TOWN.lat+randf(-spread,spread), lng: TOWN.lng+randf(-spread,spread) };
+}
+function seedUnits(){
+  units=[];
+  BEAT_POS=computeBeats();
+  var southDiv=null; for(var d=0;d<DIVISIONS.length;d++){ if(DIVISIONS[d].name==="South") southDiv=DIVISIONS[d]; }
+  // self first — exact real GPS point when available, else a spot near town center; patrols South (J = John)
+  var sp = TOWN.real ? {lat:TOWN.lat,lng:TOWN.lng} : randPoint(0.012);
+  var me={ id:uid(), callsign:session.callsign, name:session.name, badge:session.badge, type:session.type,
+           status:"available", lat:sp.lat, lng:sp.lng, street:"Locating…", isSelf:true, assignedCallId:null,
+           heading:randf(0,360), ai:false, beat:session.callsign, divBox:southDiv };
+  units.push(me);
+  queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+  // AI units — each assigned a real beat; call sign = phonetic letter + beat number (e.g. Adam-12, John-15)
+  var types=["Patrol","Patrol","NPO","Motor","K-9","Air","Supervisor","CID"];
+  var allBeats=Object.keys(BEAT_POS), used={};
+  var n=8+Math.floor(Math.random()*3);
+  for(var i=0;i<n;i++){
+    var beat; var tries=0; do{ beat=rand(allBeats); tries++; }while(used[beat] && tries<40); used[beat]=1;
+    var bp=BEAT_POS[beat];
+    var st = rand(["available","available","available","onscene","enroute"]);
+    var u={ id:uid(), callsign:beatToCallsign(beat), beat:beat, name:officerName(),
+            badge:String(1000+Math.floor(Math.random()*8999)), type:types[i%types.length],
+            status:st, lat:bp.lat, lng:bp.lng, street:rand(FALLBACK_STREETS), isSelf:false, assignedCallId:null,
+            heading:randf(0,360), ai:true, divBox:bp.divBox };
+    units.push(u);
+    (function(uu){ queueGeocode({lat:uu.lat,lng:uu.lng,set:function(s){ uu.street=s; refreshUnitMarker(uu); renderRoster(); }}); })(u);
+  }
+}
+function makeCall(forcePrio){
+  var ct = forcePrio ? rand(CALL_TYPES.filter(function(c){return c.p===forcePrio;})) : rand(CALL_TYPES);
+  var p=randInJurisdiction();
+  var c={ id:uid(), num:nextCallNum++, type:ct.t, code:ct.code, prio:ct.p,
+          lat:p.lat, lng:p.lng, street:rand(FALLBACK_STREETS), caller:rand(CALLERS),
+          status:"active", assigned:[], times:{received:Date.now()}, narrative:[] };
+  c.narrative.push({t:now(), s:"Call received — "+ct.t+" ("+ct.code+"). Priority "+ct.p+"."});
+  (function(cc){ queueGeocode({lat:cc.lat,lng:cc.lng,set:function(s){ cc.street=s; renderCalls(); if(selectedCallId===cc.id)renderCallDetail(); refreshCallMarker(cc); }}); })(c);
+  return c;
+}
+function seedCalls(){
+  calls=[];
+  var n=4+Math.floor(Math.random()*3);
+  for(var i=0;i<n;i++){
+    var c=makeCall();
+    // backdate some
+    c.times.received = Date.now()-Math.floor(randf(30,900))*1000;
+    // assign some AI units
+    if(Math.random()<0.55){
+      var avail=units.filter(function(u){return u.ai&&u.status==="available";});
+      if(avail.length){ var u=rand(avail); assignUnitToCall(u,c,true); if(Math.random()<0.5){u.status="onscene";c.status="onscene";} else {u.status="enroute";c.status="dispatched";} }
+    }
+    calls.push(c);
+  }
+  calls.sort(function(a,b){ return a.prio-b.prio || a.times.received-b.times.received; });
+}
+
+// ============================================================
+//  MAP
+// ============================================================
+function initMap(){
+  map = L.map("map",{ zoomControl:true, attributionControl:true }).setView([TOWN.lat+JD_OFFLAT*0.5, TOWN.lng], TOWN.zoom);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{
+    attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:"abcd", maxZoom:19
+  }).addTo(map);
+  drawJurisdiction();
+  units.forEach(function(u){ addUnitMarker(u); });
+  calls.forEach(function(c){ addCallMarker(c); });
+  updateEnrouteLines();
+  // keep markers fresh on resize when switching tabs
+  setTimeout(function(){ map.invalidateSize(); }, 150);
+}
+function divisionOf(lat,lng){
+  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
+  var x=(lng-cx)/JD_SX, y=(lat-cy)/JD_SY;
+  for(var i=0;i<DIVISIONS.length;i++){ var D=DIVISIONS[i]; if(x>=D.x0&&x<=D.x1&&y>=D.y0&&y<=D.y1) return D.name; }
+  return null;
+}
+function unitIcon(u){
+  var s=STATUS[u.status];
+  var size=u.isSelf?34:28;
+  // Marker fill = the division the unit patrols (South = green); border = current status
+  var divName = divisionOf(u.lat,u.lng) || (u.divBox && u.divBox.name);
+  var fill = (divName && DIV_STYLE[divName]) ? DIV_STYLE[divName].c : "#9aa7b4";
+  var ring = u.isSelf ? "box-shadow:0 0 0 3px rgba(255,255,255,.55),0 2px 8px rgba(0,0,0,.6);" : "";
+  return L.divIcon({
+    className:"",
+    html:'<div class="unit-marker'+(u.isSelf?" self":"")+'" style="width:'+size+'px;height:'+size+'px;background:'+fill+';border-color:'+s.hex+';color:#0e1116;'+ring+'">'+u.callsign.split("-").pop()+'</div>',
+    iconSize:[size,size], iconAnchor:[size/2,size/2]
+  });
+}
+function callIcon(c){
+  var col=PRIOCOLOR[c.prio];
+  return L.divIcon({
+    className:"",
+    html:'<div class="call-marker"><svg viewBox="0 0 26 34"><path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z" fill="'+col+'"/></svg><span>'+c.prio+'</span></div>',
+    iconSize:[26,34], iconAnchor:[13,34]
+  });
+}
+function addUnitMarker(u){
+  var m=L.marker([u.lat,u.lng],{icon:unitIcon(u),zIndexOffset:u.isSelf?1000:0}).addTo(map);
+  m.on("click",function(){ m.setPopupContent(unitPopup(u)); });
+  m.bindPopup(unitPopup(u));
+  unitMarkers[u.id]=m;
+}
+function unitPopup(u){
+  var s=STATUS[u.status];
+  return '<div class="pop"><h4>'+u.callsign+(u.isSelf?' (You)':'')+'</h4>'+
+    '<div class="pm">'+u.type+' • #'+u.badge+' '+u.name+'</div>'+
+    '<div class="pm">📍 '+u.street+'</div>'+
+    '<div style="margin-top:5px"><span class="chip" style="background:'+s.hex+'">'+s.label+'</span></div>'+
+    (u.assignedCallId?(function(){var cb=callById(u.assignedCallId)||{}; return '<div class="pm" style="margin-top:6px">'+(u.status==="onscene"?"🟠 On scene at":"🚗 En route to")+' Call #'+cb.num+' — '+esc(cb.type||"")+'<br><span style="opacity:.8">📍 '+esc(cb.street||"")+'</span></div>';})():'')+
+    '</div>';
+}
+function updateEnrouteLines(){
+  if(!map) return;
+  enrouteLines.forEach(function(l){ map.removeLayer(l); }); enrouteLines=[];
+  units.forEach(function(u){
+    if((u.status==="enroute"||u.status==="backup") && u.assignedCallId){
+      var c=callById(u.assignedCallId);
+      if(c){ var ln=L.polyline([[u.lat,u.lng],[c.lat,c.lng]],{ color:STATUS[u.status].hex, weight:2, opacity:0.55, dashArray:"5 7", interactive:false }); ln.addTo(map); enrouteLines.push(ln); }
+    }
+  });
+}
+function refreshUnitMarker(u){
+  var m=unitMarkers[u.id]; if(!m) return;
+  m.setIcon(unitIcon(u));
+  m.setLatLng([u.lat,u.lng]);
+  if(m.getPopup()) m.setPopupContent(unitPopup(u));
+}
+function addCallMarker(c){
+  var m=L.marker([c.lat,c.lng],{icon:callIcon(c)}).addTo(map);
+  m.bindPopup(callPopup(c));
+  m.on("click",function(){ m.setPopupContent(callPopup(c)); });
+  callMarkers[c.id]=m;
+  if(!showCallPins) map.removeLayer(m);
+}
+function callPopup(c){
+  return '<div class="pop"><h4>#'+c.num+' — '+c.type+'</h4>'+
+    '<div class="pm">'+c.code+' • '+c.caller+'</div>'+
+    '<div class="pm">📍 '+c.street+'</div>'+
+    '<div style="margin-top:5px"><span class="chip" style="background:'+PRIOCOLOR[c.prio]+'">PRIORITY '+c.prio+'</span></div>'+
+    '<div class="pm" style="margin-top:6px"><a href="#" onclick="openCall(\''+c.id+'\');return false;" style="color:var(--accent)">Open call ▸</a></div>'+
+    '</div>';
+}
+function refreshCallMarker(c){
+  var m=callMarkers[c.id]; if(!m) return;
+  m.setIcon(callIcon(c)); m.setLatLng([c.lat,c.lng]);
+  if(m.getPopup()) m.setPopupContent(callPopup(c));
+}
+function removeCallMarker(c){ var m=callMarkers[c.id]; if(m){ map.removeLayer(m); delete callMarkers[c.id]; } }
+
+$("recenterBtn").onclick=function(){
+  var u=self(); if(!u) return;
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      applyNewCenter(pos.coords.latitude,pos.coords.longitude);
+      toast("📍 GPS Updated","Centered on your current location.","");
+    }, function(){ if(map) map.setView([u.lat,u.lng],15); }, { enableHighAccuracy:false, timeout:11000, maximumAge:60000 });
+  } else { if(map) map.setView([u.lat,u.lng],15); }
+};
+$("callsToggleBtn").onclick=function(){
+  showCallPins=!showCallPins;
+  this.style.opacity=showCallPins?"1":"0.45";
+  for(var id in callMarkers){ if(showCallPins) callMarkers[id].addTo(map); else map.removeLayer(callMarkers[id]); }
+};
+
+// ---- Manual location (forward geocode) — works even when GPS is blocked on file:// ----
+function openLocationModal(){
+  showModal(
+   "<div class='modal-h'><h3>📍 Set My Location</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+   "<div class='modal-b'>"+
+     "<p class='hint'>Type a city, address, or place. The map and nearby units will center there. Use this if GPS is blocked (it usually is when the page is opened as a local file).</p>"+
+     "<div class='field'><label>Address / City</label><input id='locQ' placeholder='e.g. 350 W Belknap St, Fort Worth, TX' value='Fort Worth, TX'></div>"+
+     "<button class='btn' onclick='searchLocation()'>Set Location</button>"+
+     "<div class='hint' id='locResult' style='margin-top:10px'></div>"+
+   "</div>");
+  var i=$("locQ"); if(i){ i.focus(); i.addEventListener("keydown",function(e){ if(e.key==="Enter") searchLocation(); }); }
+}
+window.openLocationModal=openLocationModal;
+function searchLocation(){
+  var q=($("locQ").value||"").trim(); if(!q) return;
+  var res=$("locResult"); res.textContent="Searching…";
+  fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q="+encodeURIComponent(q),{headers:{"Accept":"application/json"}})
+   .then(function(r){return r.json();}).then(function(j){
+     if(j&&j.length){
+       var p=j[0];
+       applyNewCenter(parseFloat(p.lat),parseFloat(p.lon));
+       closeModal();
+       toast("📍 Location Set", p.display_name.split(",").slice(0,3).join(","), "");
+     } else { res.textContent="No match found — try a city or a more complete address."; }
+   }).catch(function(){ res.textContent="Lookup failed — check your internet connection."; });
+}
+window.searchLocation=searchLocation;
+function applyNewCenter(lat,lng){
+  TOWN.lat=lat; TOWN.lng=lng; TOWN.real=true;
+  var me=self(); me.lat=lat; me.lng=lng;
+  units.forEach(function(u){ if(u.ai){ var p=randPoint(0.02); u.lat=p.lat; u.lng=p.lng; refreshUnitMarker(u); } });
+  refreshUnitMarker(me);
+  if(map) map.setView([lat,lng],15);
+  drawJurisdiction();
+  queueGeocode({lat:lat,lng:lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+  renderDuty(); renderRoster();
+}
+if($("setLocBtn")) $("setLocBtn").onclick=openLocationModal;
+
+// ---- JURISDICTION: divisions + beats (South = our JD) ----
+var jdLayers=[];
+var enrouteLines=[];
+var JD_OFFLAT=0.030; // shift the grid north so YOUR location sits in South division
+// Full FWPD division + beat set, arranged compass-style around the map center (x=east, y=north)
+var DIV_STYLE={ "South":{c:"#86efac"},"Central":{c:"#5aa9ff"},"North":{c:"#ff6b6b"},"Northwest":{c:"#c79bff"},"East":{c:"#f0a93b"},"West":{c:"#efe0a0"} };
+var DIVISIONS=[
+  {name:"Central",   c:"#5aa9ff", cols:6, x0:-1.02, y0:-0.51, x1:1.02,  y1:0.51,  beats:["A11","A12","A13","A14","A15","A16","A17","A18","A19","B11","B12","B13","B14","B15","B16","B17","B18","B19"]},
+  {name:"North",     c:"#ff6b6b", cols:7, x0:-1.19, y0:0.51,  x1:1.19,  y1:1.19,  beats:["F11","F12","F13","F14","F15","F16","E11","E12","E13","E14","E15","E16","E17","E18"]},
+  {name:"Northwest", c:"#c79bff", cols:7, x0:-3.57, y0:0.51,  x1:-1.19, y1:1.19,  beats:["C11","C12","C13","C14","C15","C16","C17","D11","D12","D13","D14","D15","D16","D17"]},
+  {name:"East",      c:"#f0a93b", cols:6, x0:1.02,  y0:-0.51, x1:3.06,  y1:0.51,  beats:["G11","G12","G13","G14","G15","G16","G17","G18","G19","H11","H12","H13","H14","H15","H16","H17","H18","H19"]},
+  {name:"West",      c:"#efe0a0", cols:5, x0:-2.72, y0:-0.85, x1:-1.02, y1:0.51,  beats:["K11","K12","K13","K14","K15","K16","K17","K18","K19","L11","L12","L13","L14","L15","L16","L17","L18","L19","L21"]},
+  {name:"South",     c:"#86efac", cols:5, x0:-0.85, y0:-2.00, x1:0.85,  y1:-0.51, beats:["I11","I12","I13","I14","I15","I16","I17","I18","I19","J11","J12","J13","J14","J15","J16","J17","J18","J19","J21"]}
+];
+var PHON={A:"Adam",B:"Boy",C:"Charlie",D:"David",E:"Edward",F:"Frank",G:"George",H:"Henry",I:"Ida",J:"John",K:"King",L:"Lincoln"};
+function beatToCallsign(b){ return (PHON[b.charAt(0)]||b.charAt(0))+"-"+b.replace(/^[A-Z]/,""); }
+var BEAT_POS={};
+function computeBeats(){
+  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT, out={};
+  DIVISIONS.forEach(function(D){
+    var n=D.beats.length, cols=D.cols, rows=Math.ceil(n/cols), cwx=(D.x1-D.x0)/cols, chy=(D.y1-D.y0)/rows;
+    for(var i=0;i<n;i++){
+      var col=i%cols, row=Math.floor(i/cols);
+      var x0=D.x0+col*cwx, x1=x0+cwx, yTop=D.y1-row*chy, yBot=yTop-chy;
+      out[D.beats[i]]={ lat:cy+((yTop+yBot)/2)*JD_SY, lng:cx+((x0+x1)/2)*JD_SX, div:D.name, divBox:D };
+    }
+  });
+  return out;
+}
+function randInJurisdiction(){
+  var D=rand(DIVISIONS), cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
+  return { lat: cy+randf(D.y0,D.y1)*JD_SY, lng: cx+randf(D.x0,D.x1)*JD_SX };
+}
+function clearJd(){ jdLayers.forEach(function(l){ if(map) map.removeLayer(l); }); jdLayers=[]; }
+var JD_SX=0.018, JD_SY=0.016; // degrees per layout-unit (lng, lat)
+function drawJurisdiction(){
+  if(!map) return;
+  clearJd();
+  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
+  DIVISIONS.forEach(function(D){
+    var ours=(D.name==="South"), n=D.beats.length, cols=D.cols, rows=Math.ceil(n/cols);
+    var cwx=(D.x1-D.x0)/cols, chy=(D.y1-D.y0)/rows;
+    for(var i=0;i<n;i++){
+      var col=i%cols, row=Math.floor(i/cols);
+      var x0=D.x0+col*cwx, x1=x0+cwx, yTop=D.y1-row*chy, yBot=yTop-chy;
+      var west=cx+x0*JD_SX, east=cx+x1*JD_SX, north=cy+yTop*JD_SY, south=cy+yBot*JD_SY;
+      var rect=L.rectangle([[south,west],[north,east]],{ color:"#14171b", weight:1, opacity:0.7, fillColor:D.c, fillOpacity:ours?0.55:0.42, interactive:false });
+      rect.addTo(map); jdLayers.push(rect);
+      var clat=(north+south)/2, clng=(west+east)/2;
+      var bl=L.marker([clat,clng],{ interactive:false, icon:L.divIcon({className:"", html:"<div style='font-size:9px;color:#0f1318;font-weight:800;font-family:monospace;text-shadow:0 1px 1px rgba(255,255,255,.6)'>"+D.beats[i]+"</div>", iconSize:[26,12], iconAnchor:[13,6]}) });
+      bl.addTo(map); jdLayers.push(bl);
+    }
+    var nlat=cy+(D.y1*JD_SY)+0.004, nlng=cx+(((D.x0+D.x1)/2)*JD_SX);
+    var html="<div style='font-size:"+(ours?13:11)+"px;font-weight:800;letter-spacing:.5px;color:#0e1116;background:"+D.c+";padding:1px 7px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;opacity:.96'>"+D.name.toUpperCase()+(ours?" ★":"")+"</div>";
+    var m=L.marker([nlat,nlng],{ interactive:false, icon:L.divIcon({className:"", html:html, iconSize:[120,18], iconAnchor:[60,9]}) });
+    m.addTo(map); jdLayers.push(m);
+  });
+  renderJdLegend();
+}
+function renderJdLegend(){
+  var box=$("jdRows"); if(!box) return; box.innerHTML="";
+  ["South","Central","North","Northwest","East","West"].forEach(function(div){
+    var st=DIV_STYLE[div];
+    var row=el("div","duty-row");
+    row.innerHTML="<span class='dotc' style='background:"+st.c+"'></span><span class='lbl'>"+div+(div==="South"?" <b style='color:var(--accent)'>(Your JD)</b>":"")+"</span>";
+    box.appendChild(row);
+  });
+}
+
+// ============================================================
+//  RENDER — TOP / DUTY / ROSTER / LOG
+// ============================================================
+function buildSelfStatusButtons(){
+  // Top bar = general statuses only (En Route / On Scene live on the call panel)
+  var wrap=$("selfStatusBtns"); wrap.innerHTML="";
+  ["available","break","unavailable"].forEach(function(s){
+    var b=el("button","sbtn",STATUS[s].label);
+    b.dataset.s=s;
+    b.onclick=function(){
+      if(s==="available" && self().assignedCallId){ detachSelf(self().assignedCallId); } // clears off current call
+      else setSelfStatus(s);
+    };
+    wrap.appendChild(b);
+  });
+}
+function renderTopStatus(){
+  var u=self(); if(!u) return;
+  var s=STATUS[u.status];
+  var pill=$("tbStatus");
+  pill.textContent=s.label.toUpperCase();
+  pill.style.background=s.hex;
+  pill.style.color = (u.status==="unavailable")?"#fff":"#06121d";
+  document.querySelectorAll("#selfStatusBtns .sbtn").forEach(function(b){
+    var on=b.dataset.s===u.status;
+    b.classList.toggle("active",on);
+    b.style.background = on?STATUS[u.status].hex:"";
+  });
+  $("backupBtn").classList.toggle("alert", u.status==="backup");
+}
+function renderDuty(){
+  var counts={available:0,enroute:0,onscene:0,backup:0,unavailable:0};
+  units.forEach(function(u){ counts[u.status]=(counts[u.status]||0)+1; });
+  $("dpTotal").textContent=units.length;
+  var rows=$("dutyRows"); rows.innerHTML="";
+  ["available","enroute","onscene","backup","unavailable"].forEach(function(s){
+    var r=el("div","duty-row");
+    r.innerHTML='<span class="dotc" style="background:'+STATUS[s].hex+'"></span><span class="lbl">'+STATUS[s].label+'</span><span class="cnt">'+counts[s]+'</span>';
+    rows.appendChild(r);
+  });
+  $("unitsCount").textContent=units.length+" on duty";
+}
+function renderRoster(){
+  var tb=$("rosterBody"); if(!tb) return; tb.innerHTML="";
+  units.slice().sort(function(a,b){return (b.isSelf?1:0)-(a.isSelf?1:0);}).forEach(function(u){
+    var s=STATUS[u.status];
+    var assign = u.assignedCallId ? ("#"+((callById(u.assignedCallId)||{}).num||"")+" "+((callById(u.assignedCallId)||{}).type||"")) : "—";
+    var tr=el("tr");
+    tr.innerHTML="<td><b class='mono'>"+u.callsign+"</b>"+(u.isSelf?" <span class='tag'>YOU</span>":"")+"</td>"+
+      "<td>#"+u.badge+" "+u.name+"</td><td>"+u.type+"</td>"+
+      "<td><span class='sdot'><i style='background:"+s.hex+"'></i>"+s.label+"</span></td>"+
+      "<td>"+u.street+"</td><td>"+assign+"</td>";
+    tb.appendChild(tr);
+  });
+}
+function renderLog(){
+  var sc=$("logScroll"); if(!sc) return; sc.innerHTML="";
+  logEntries.forEach(function(e){
+    var color = e.kind==="backup"?"#ff3b3b":e.kind==="prio"?"#ff3b3b":e.kind==="call"?"#3da9fc":e.kind==="status"?"#ff9f1c":"#7a8a9a";
+    var item=el("div","log-item"+(e.kind==="backup"?" prio":""));
+    item.innerHTML="<span class='lt'>"+hhmmss(e.t)+"</span><span class='li' style='background:"+color+"'></span><span class='lx'>"+e.text+"</span>";
+    sc.appendChild(item);
+  });
+}
+$("clearLogBtn").onclick=function(){ logEntries=[]; renderLog(); };
+
+// ============================================================
+//  CALLS
+// ============================================================
+function callById(id){ for(var i=0;i<calls.length;i++) if(calls[i].id===id) return calls[i]; return null; }
+function activeCalls(){ return calls.filter(function(c){return c.status!=="cleared";}); }
+function updateCallsBadge(){
+  var open=activeCalls().length;
+  var p1=activeCalls().filter(function(c){return c.prio===1;}).length;
+  var dot=$("callsDot");
+  dot.textContent=open;
+  dot.classList.toggle("show",open>0);
+  dot.style.background = p1>0 ? "var(--p1)" : "var(--accent2)";
+}
+function callMatchesFilter(c){
+  if(callSearch){
+    var q=callSearch.toLowerCase();
+    if((c.type+" "+c.street+" "+c.num+" "+c.code+" "+c.caller).toLowerCase().indexOf(q)<0) return false;
+  }
+  if(callFilter==="all") return true;
+  if(callFilter==="mine") return c.assigned.indexOf(self().id)>=0;
+  if(callFilter==="unassigned") return c.assigned.length===0;
+  return c.prio===parseInt(callFilter,10);
+}
+function renderCalls(){
+  var sc=$("callsScroll"); if(!sc) return;
+  var histWin={h1:1,h5:5,h12:12}[callFilter];
+  var isHist=!!histWin, list;
+  if(isHist){
+    var cutoff=Date.now()-histWin*3600000;
+    list=calls.filter(function(c){ return c.status==="cleared" && c.times.cleared && c.times.cleared>=cutoff; }).filter(function(c){
+      if(!callSearch) return true;
+      var q=callSearch.toLowerCase();
+      return (c.type+" "+c.street+" "+c.num+" "+c.code+" "+c.caller).toLowerCase().indexOf(q)>=0;
+    });
+    list.sort(function(a,b){ return b.times.cleared-a.times.cleared; }); // most recently cleared first
+  } else {
+    list=calls.filter(function(c){return c.status!=="cleared";}).filter(callMatchesFilter);
+    list.sort(function(a,b){ return a.prio-b.prio || a.times.received-b.times.received; });
+  }
+  sc.innerHTML="";
+  if(list.length===0){ sc.appendChild(el("div","cd-empty",isHist?"No calls cleared in this window yet.":"No calls match this filter.")); updateCallsBadge(); return; }
+  list.forEach(function(c){
+    var row=el("div","call-row"+(c.id===selectedCallId?" sel":""));
+    var stClass = c.status==="active"?"st-active":c.status==="dispatched"?"st-dispatched":c.status==="onscene"?"st-onscene":"st-cleared";
+    var stLabel = c.status==="active"?"PENDING":c.status==="dispatched"?"DISPATCHED":c.status==="onscene"?"ON SCENE":"CLEARED";
+    var mine = c.assigned.indexOf(self().id)>=0;
+    var timer = (c.status==="cleared" && c.times.cleared)
+      ? "<span class='cr-timer' title='Cleared time'>✓ "+hhmm(new Date(c.times.cleared))+"</span>"
+      : "<span class='cr-timer' data-rec='"+c.times.received+"'>"+elapsed(c.times.received)+"</span>";
+    row.innerHTML=
+      "<div class='prio' style='background:"+PRIOCOLOR[c.prio]+"'>"+c.prio+"</div>"+
+      "<div class='cr-main'>"+
+        "<div class='cr-type'>"+c.type+(mine?" <span class='tag' style='color:var(--accent);border-color:var(--accent)'>MINE</span>":"")+"</div>"+
+        "<div class='cr-loc'>📍 "+c.street+" • #"+c.num+" "+c.code+"</div>"+
+        "<div class='cr-meta'><span class='tag "+stClass+"'>"+stLabel+"</span>"+
+          "<span>👤 "+c.assigned.length+" unit"+(c.assigned.length===1?"":"s")+"</span>"+
+          timer+"</div>"+
+      "</div>";
+    row.onclick=function(){ openCall(c.id); };
+    sc.appendChild(row);
+  });
+  updateCallsBadge();
+}
+function openCall(id){
+  selectedCallId=id;
+  switchView("calls");
+  renderCalls();
+  renderCallDetail();
+  var c=callById(id);
+  if(c&&map) map.setView([c.lat,c.lng], 15);
+}
+window.openCall=openCall;
+
+function renderCallDetail(){
+  var cd=$("callDetail");
+  var c=callById(selectedCallId);
+  if(!c){
+    cd.innerHTML='<div class="cd-empty" id="cdEmpty"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><div>Select a call to view details<br>and update your status.</div></div>';
+    return;
+  }
+  var me=self();
+  var isCleared = c.status==="cleared";
+  var mineStatus = c.assigned.indexOf(me.id)>=0 ? me.status : null;
+  function abtn(s,label,icon){
+    var on = mineStatus===s;
+    return "<button class='"+(on?"on":"")+"' style='"+(on?"background:"+STATUS[s].hex:"")+"' onclick=\"callAction('"+c.id+"','"+s+"')\">"+icon+" "+label+"</button>";
+  }
+  var actions = isCleared
+    ? "<div class='cd-actions'><span style='color:var(--muted);font-weight:800;letter-spacing:.5px;display:flex;align-items:center'>✓ CALL CLEARED — READ ONLY (HISTORY)</span></div>"
+    : "<div class='cd-actions'>"+abtn("enroute","En Route","🚗")+abtn("onscene","On Scene","📍")+
+        "<button onclick=\"requestSupervisor('"+c.id+"')\" style='background:#1f6feb;color:#fff;border:none'>🚔 Request Supervisor</button>"+
+        "<button class='bk' onclick=\"requestBackupForCall('"+c.id+"')\">🚨 Request Backup</button></div>";
+
+  var assignedChips = c.assigned.length? c.assigned.map(function(uid2){
+    var u=unitById(uid2); if(!u) return "";
+    return "<span class='unit-chip'><span class='ud' style='background:"+STATUS[u.status].hex+"'></span><b>"+u.callsign+"</b> "+STATUS[u.status].label+(u.isSelf?" (You)":"")+"</span>";
+  }).join("") : "<span style='color:var(--muted);font-size:13px'>No units assigned.</span>";
+  var finalChips = (c.finalUnits&&c.finalUnits.length)
+    ? c.finalUnits.map(function(cs){ return "<span class='unit-chip'><b>"+cs+"</b></span>"; }).join("")
+    : "<span style='color:var(--muted);font-size:13px'>No units recorded.</span>";
+
+  var times=c.times;
+  function tcell(k,v){ return "<div class='cd-cell'><div class='k'>"+k+"</div><div class='v'>"+(v||"—")+"</div></div>"; }
+  function durTxt(){ if(!times.cleared) return "—"; var s=Math.floor((times.cleared-times.received)/1000),m=Math.floor(s/60); s=s%60; return m+"m "+(s<10?"0":"")+s+"s"; }
+
+  var grid =
+    "<div class='cd-grid'>"+
+      tcell("Location","📍 "+c.street)+
+      tcell("Status", isCleared?"CLEARED (Code 4)":(c.status==="active"?"PENDING / UNASSIGNED":c.status.toUpperCase()))+
+      tcell("Caller",c.caller)+
+      tcell("Received",hhmmss(new Date(times.received)))+
+      (isCleared
+        ? tcell("Cleared",hhmmss(new Date(times.cleared)))+tcell("Total Duration",durTxt())
+        : tcell("Dispatched",times.dispatched?hhmmss(new Date(times.dispatched)):"—")+tcell("First On Scene",times.onscene?hhmmss(new Date(times.onscene)):"—"))+
+    "</div>";
+
+  var assignSection = isCleared
+    ? "<div class='cd-section'><h3>Units (final)</h3>"+finalChips+"</div>"
+    : "<div class='cd-section'><h3>Assigned Units ("+c.assigned.length+")"+
+        (c.assigned.indexOf(me.id)<0?"<span class='add' onclick=\"attachSelf('"+c.id+"')\">+ Attach me</span>":"<span class='add' onclick=\"detachSelf('"+c.id+"')\">− Clear me</span>")+
+        "</h3>"+assignedChips+"</div>";
+
+  var narrSection = "<div class='cd-section'><h3>Narrative / CAD Notes</h3>"+
+        "<div class='narrative'><div class='narr-log' id='narrLog'></div>"+
+        (isCleared?"":"<div class='narr-input'><input id='narrInput' placeholder='Add note to call…'><button onclick=\"addNote('"+c.id+"')\">Add</button></div>")+
+        "</div></div>";
+
+  var dispSection = isCleared ? "" :
+        "<div class='cd-section'><h3>Disposition</h3><button class='sbtn' onclick=\"clearCall('"+c.id+"')\">✓ Clear Call (Code 4)</button></div>";
+
+  // Incident report section — only on cleared calls; shows linked report or a create button
+  var linkedReport=null;
+  if(isCleared){ for(var ri=0;ri<reports.length;ri++){ if(reports[ri].callNum===c.num){ linkedReport=reports[ri]; break; } } }
+  var reportSection = isCleared
+    ? "<div class='cd-section'><h3>Incident Report</h3>"+
+        (linkedReport
+          ? "<div class='unit-chip' style='cursor:pointer;border-color:var(--accent)' onclick=\"openReportDetail('"+linkedReport.id+"')\">📄 <b>"+linkedReport.num+"</b> &nbsp;"+repStatusBadge(linkedReport.status)+" &nbsp;— view report</div>"+
+            "<div style='margin-top:10px'><button class='sbtn' onclick=\"fileReportFromCall('"+c.id+"')\">📝 File Another Report</button></div>"
+          : "<p style='color:var(--muted);font-size:13px;margin:0 0 10px'>No report has been filed for this call yet.</p>"+
+            "<button class='btn' style='width:auto' onclick=\"fileReportFromCall('"+c.id+"')\">📝 Create Incident Report from this Call</button>")+
+      "</div>"
+    : "";
+
+  var body=
+    "<div class='cd-body'>"+
+      "<div class='cd-title'><div class='prio' style='background:"+PRIOCOLOR[c.prio]+"'>"+c.prio+"</div>"+
+        "<div><h2>"+c.type+"</h2><div class='sub'>Call #"+c.num+" • "+c.code+" • Priority "+c.prio+(isCleared?" • CLOSED":"")+"</div></div></div>"+
+      (c.supRequested?"<div style='background:rgba(31,111,235,.15);border:1px solid var(--accent);border-radius:9px;padding:9px 12px;margin-bottom:14px;font-weight:700'>🚔 "+esc(c.supBy||"")+" - Supervisor &nbsp;<span style='color:var(--muted);font-weight:400'>(supervisor requested / en route)</span></div>":"")+
+      grid + reportSection + assignSection + narrSection + dispSection +
+    "</div>";
+
+  cd.innerHTML = actions+body;
+  var nl=$("narrLog");
+  if(nl){ c.narrative.slice().reverse().forEach(function(n){
+    var it=el("div","narr-item");
+    it.innerHTML="<span class='t'>"+hhmmss(n.t)+"</span><span>"+n.s+"</span>";
+    nl.appendChild(it);
+  }); }
+  var ni=$("narrInput");
+  if(ni) ni.addEventListener("keydown",function(e){ if(e.key==="Enter") addNote(c.id); });
+}
+function unitById(id){ for(var i=0;i<units.length;i++) if(units[i].id===id) return units[i]; return null; }
+
+function assignUnitToCall(u,c,silent){
+  if(c.assigned.indexOf(u.id)<0) c.assigned.push(u.id);
+  u.assignedCallId=c.id;
+  if(!c.times.dispatched){ c.times.dispatched=Date.now(); }
+  if(c.status==="active") c.status="dispatched";
+  if(!silent){ c.narrative.push({t:now(),s:u.callsign+" assigned to call."}); logEvent(u.callsign+" dispatched to #"+c.num+" ("+c.type+")","call"); }
+}
+function attachSelf(id){
+  var c=callById(id), me=self();
+  assignUnitToCall(me,c);
+  setSelfStatus("enroute",true);
+  c.narrative.push({t:now(),s:me.callsign+" en route."});
+  logEvent(me.callsign+" attached & en route to #"+c.num,"status");
+  renderEverythingForCall(c);
+}
+window.attachSelf=attachSelf;
+function detachSelf(id){
+  var c=callById(id), me=self();
+  c.assigned=c.assigned.filter(function(x){return x!==me.id;});
+  if(me.assignedCallId===c.id) me.assignedCallId=null;
+  setSelfStatus("available",true);
+  c.narrative.push({t:now(),s:me.callsign+" cleared from call."});
+  logEvent(me.callsign+" cleared from #"+c.num,"status");
+  renderEverythingForCall(c);
+}
+window.detachSelf=detachSelf;
+
+function callAction(id,status){
+  var c=callById(id), me=self();
+  if(status==="enroute"){ beep(680,0.12,"triangle",0.4); }                                              // En Route confirm blip
+  else if(status==="onscene"){ beep(560,0.10,"triangle",0.4); setTimeout(function(){beep(860,0.14,"triangle",0.4);},120); } // On Scene confirm chirp
+  // attach if needed
+  if(status!=="available" && status!=="unavailable" && c.assigned.indexOf(me.id)<0){
+    assignUnitToCall(me,c);
+  }
+  if(status==="onscene"){
+    if(!c.times.onscene) c.times.onscene=Date.now();
+    if(c.status!=="onscene") c.status="onscene";
+    c.narrative.push({t:now(),s:me.callsign+" on scene."});
+  } else if(status==="enroute"){
+    if(c.assigned.indexOf(me.id)<0) assignUnitToCall(me,c);
+    c.narrative.push({t:now(),s:me.callsign+" en route."});
+  } else if(status==="available"){
+    c.assigned=c.assigned.filter(function(x){return x!==me.id;});
+    if(me.assignedCallId===c.id) me.assignedCallId=null;
+    c.narrative.push({t:now(),s:me.callsign+" available / cleared."});
+  } else if(status==="unavailable"){
+    c.narrative.push({t:now(),s:me.callsign+" unavailable (out of service)."});
+  }
+  setSelfStatus(status,true);
+  logEvent(me.callsign+" "+STATUS[status].label.toUpperCase()+" — #"+c.num+" "+c.type,"status");
+  renderEverythingForCall(c);
+}
+window.callAction=callAction;
+
+function addNote(id){
+  var c=callById(id); var inp=$("narrInput"); if(!inp) return;
+  var v=inp.value.trim(); if(!v) return;
+  c.narrative.push({t:now(),s:self().callsign+": "+v});
+  inp.value="";
+  renderCallDetail();
+}
+window.addNote=addNote;
+
+function clearCall(id){
+  var c=callById(id);
+  c.status="cleared"; c.times.cleared=Date.now();
+  c.finalUnits = c.assigned.map(function(uid2){ var u=unitById(uid2); return u?u.callsign:null; }).filter(Boolean); // snapshot for history
+  c.assigned.forEach(function(uid2){ var u=unitById(uid2); if(u){ u.assignedCallId=null; if(u.isSelf) setSelfStatus("available",true); else { u.status="available"; if(u.beat && BEAT_POS[u.beat]){ u.lat=BEAT_POS[u.beat].lat; u.lng=BEAT_POS[u.beat].lng; } } } });
+  c.assigned=[];
+  logEvent("Call #"+c.num+" ("+c.type+") CLEARED — Code 4","call");
+  removeCallMarker(c);
+  if(selectedCallId===id) selectedCallId=null;
+  renderCalls(); renderCallDetail(); renderDuty(); renderRoster();
+  units.forEach(refreshUnitMarker);
+}
+window.clearCall=clearCall;
+
+function renderEverythingForCall(c){
+  renderCalls(); renderCallDetail(); renderDuty(); renderRoster();
+  refreshCallMarker(c); refreshUnitMarker(self());
+  updateEnrouteLines();
+  renderTopStatus();
+}
+
+// ---------- BACKUP ----------
+function requestBackupForCall(id){
+  var c=callById(id), me=self();
+  if(c.assigned.indexOf(me.id)<0) assignUnitToCall(me,c);
+  doBackup(c, c.prio);
+}
+window.requestBackupForCall=requestBackupForCall;
+
+function requestSupervisor(id){
+  var c=callById(id), me=self();
+  c.supRequested=true; c.supBy=me.callsign;
+  c.narrative.push({t:now(), s:me.callsign+" requested a supervisor."});
+  logEvent("🚔 "+me.callsign+" - Supervisor — requested for #"+c.num+" ("+c.type+")","backup");
+  toast("🚔 Supervisor Requested", me.callsign+" - Supervisor en route to #"+c.num+".","");
+  beep(660,0.14,"sine",0.4);
+  // dispatch nearest available AI supervisor
+  var sups=units.filter(function(u){return u.ai && u.type==="Supervisor" && u.status!=="unavailable";});
+  sups.sort(function(a,b){return dist(a,c)-dist(b,c);});
+  if(sups.length){ var s=sups[0]; assignUnitToCall(s,c,true); s.status="enroute"; c.narrative.push({t:now(),s:s.callsign+" (Supervisor) en route."}); logEvent(s.callsign+" (Supervisor) en route to #"+c.num,"backup"); }
+  renderEverythingForCall(c);
+}
+window.requestSupervisor=requestSupervisor;
+
+function requestBackupNow(notes){
+  var me=self();
+  var c = me.assignedCallId ? callById(me.assignedCallId) : null;
+  if(!c){
+    c={ id:uid(), num:nextCallNum++, type:"Officer Needs Assistance", code:"Sig 0", prio:1,
+        lat:me.lat,lng:me.lng,street:me.street,caller:me.callsign,status:"dispatched",
+        assigned:[me.id], times:{received:Date.now(),dispatched:Date.now()}, narrative:[] };
+    c.narrative.push({t:now(),s:"BACKUP REQUESTED by "+me.callsign});
+    me.assignedCallId=c.id;
+    calls.push(c);
+    addCallMarker(c);
+  } else if(c.assigned.indexOf(me.id)<0){ assignUnitToCall(me,c); }
+  if(notes){ c.narrative.push({t:now(), s:me.callsign+" notes: "+notes}); }
+  doBackup(c,1);
+  selectedCallId=c.id; // surface it like a normal call
+  renderCalls();
+}
+window.requestBackupNow=requestBackupNow;
+// Top-bar backup: optional notes, no priority picker
+$("backupBtn").onclick=function(){
+  showModal(
+    "<div class='modal-h'><h3>🚨 Request Backup</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p class='hint'>Dispatch is notified and the nearest unit is sent. This posts as a live call in the Calls tab.</p>"+
+      "<div class='field'><label>Notes (optional)</label><textarea class='fld' id='bkNotes' placeholder='e.g. subject non-compliant, need a second unit'></textarea></div>"+
+      "<button class='btn' style='background:linear-gradient(160deg,#ff5252,#b81212)' onclick='confirmBackupNotes()'>🚨 Send Backup Request</button>"+
+    "</div>");
+  setTimeout(function(){ try{$("bkNotes").focus();}catch(e){} },50);
+};
+function confirmBackupNotes(){
+  var notes=($("bkNotes")&&$("bkNotes").value.trim())||"";
+  closeModal();
+  requestBackupNow(notes);
+}
+window.confirmBackupNotes=confirmBackupNotes;
+function openBackupModal(c){
+  var html=
+    "<div class='modal-h'><h3>🚨 Request Backup</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p class='hint'>Dispatch will be notified immediately and assign the nearest available unit. Choose the urgency.</p>"+
+      "<div class='field'><label>Priority</label><div class='seg' id='bkSeg'>"+
+        "<button data-p='1' style='border-color:var(--p1)'>P1 — Emergency</button>"+
+        "<button data-p='2' style='border-color:var(--p2)'>P2 — Urgent</button>"+
+        "<button data-p='3' style='border-color:var(--p3)'>P3 — Routine</button>"+
+      "</div></div>"+
+      "<div class='field'><label>Reason (optional)</label><input id='bkReason' placeholder='e.g. subject non-compliant'></div>"+
+      "<button class='btn' style='background:linear-gradient(160deg,#ff5252,#b81212)' onclick='confirmBackup("+(c?("\""+c.id+"\""):"null")+")'>🚨 Send to Dispatch</button>"+
+    "</div>";
+  showModal(html);
+  var seg=$("bkSeg"); var chosen= c?c.prio:1;
+  function paint(){ seg.querySelectorAll("button").forEach(function(b){ var on=parseInt(b.dataset.p,10)===chosen; b.classList.toggle("on",on); b.style.background= on?PRIOCOLOR[chosen]:""; b.style.color=on?"#06121d":""; }); }
+  seg.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ chosen=parseInt(b.dataset.p,10); paint(); }; });
+  paint();
+  window._bkPrio=function(){ return chosen; };
+}
+function confirmBackup(cid){
+  var prio = window._bkPrio?window._bkPrio():1;
+  var reason = ($("bkReason")&&$("bkReason").value.trim())||"";
+  var c = cid?callById(cid):null;
+  closeModal();
+  if(!c){
+    // create an officer-safety call at officer location
+    var me=self();
+    c={ id:uid(), num:nextCallNum++, type:"Officer Needs Assistance", code:"Sig 0", prio:prio,
+        lat:me.lat,lng:me.lng,street:me.street,caller:me.callsign,status:"dispatched",
+        assigned:[me.id], times:{received:Date.now(),dispatched:Date.now()}, narrative:[] };
+    c.narrative.push({t:now(),s:"BACKUP REQUESTED by "+me.callsign+(reason?(" — "+reason):"")});
+    me.assignedCallId=c.id;
+    calls.push(c);
+    addCallMarker(c);
+  }
+  doBackup(c, prio, reason);
+}
+window.confirmBackup=confirmBackup;
+
+function doBackup(c, prio, reason){
+  var me=self();
+  setSelfStatus("backup",true);
+  c.prio = Math.min(c.prio, prio);
+  c.narrative.push({t:now(),s:"🚨 BACKUP REQUESTED ("+("P"+prio)+")"+(reason?(" — "+reason):"")+" — dispatch notified."});
+  logEvent("🚨 BACKUP REQUESTED by "+me.callsign+" — P"+prio+" — #"+c.num+" "+c.type+(reason?(" ("+reason+")"):""),"backup");
+  toast("🚨 BACKUP DISPATCHED","Dispatch notified. Nearest unit en route to "+me.callsign+" at "+c.street+".","backup");
+  alertTone(); setTimeout(alertTone,400);
+  // dispatch nearest available AI unit
+  var avail=units.filter(function(u){return u.ai&&(u.status==="available"||u.status==="enroute");});
+  avail.sort(function(a,b){ return dist(a,c)-dist(b,c); });
+  if(avail.length){
+    var u=avail[0];
+    assignUnitToCall(u,c,true);
+    u.status="enroute";
+    c.narrative.push({t:now(),s:u.callsign+" en route as backup (ETA "+(1+Math.floor(Math.random()*4))+" min)."});
+    logEvent(u.callsign+" assigned as BACKUP for "+me.callsign+" → #"+c.num,"backup");
+    setTimeout(function(){ toast("Backup en route", u.callsign+" responding to assist "+me.callsign+".","p1"); }, 1200);
+  }
+  refreshCallMarker(c); refreshUnitMarker(me);
+  renderEverythingForCall(c); renderTopStatus(); buildSelfStatusButtons(); renderTopStatus();
+}
+function dist(a,b){ var dx=a.lat-b.lat, dy=a.lng-b.lng; return Math.sqrt(dx*dx+dy*dy); }
+
+// ---------- NEW / SELF-INITIATED CALL ----------
+$("newCallBtn").onclick=function(){
+  var opts=CALL_TYPES.map(function(ct,i){ return "<option value='"+i+"'>"+ct.t+" (P"+ct.p+" • "+ct.code+")</option>"; }).join("");
+  var html=
+    "<div class='modal-h'><h3>＋ New / Self-Initiated Call</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<div class='field'><label>Call Type</label><select id='ncType'>"+opts+"</select></div>"+
+      "<div class='field'><label>Location / Street</label><input id='ncLoc' placeholder='e.g. Main St & 3rd'></div>"+
+      "<div class='field'><label>Caller / Source</label><input id='ncCaller' value='"+self().callsign+" (self-initiated)'></div>"+
+      "<label style='display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:14px'><input type='checkbox' id='ncAttach' checked> Attach me & set En Route</label>"+
+      "<button class='btn' onclick='createManualCall()'>Create Call</button>"+
+    "</div>";
+  showModal(html);
+};
+function createManualCall(){
+  var ct=CALL_TYPES[parseInt($("ncType").value,10)];
+  var loc=($("ncLoc").value.trim())||self().street;
+  var caller=$("ncCaller").value.trim()||"Self";
+  var attach=$("ncAttach").checked;
+  var me=self();
+  var p=attach? {lat:me.lat,lng:me.lng} : randPoint();
+  var c={ id:uid(), num:nextCallNum++, type:ct.t, code:ct.code, prio:ct.p,
+          lat:p.lat,lng:p.lng,street:loc,caller:caller,status:"active",assigned:[],times:{received:Date.now()},narrative:[] };
+  c.narrative.push({t:now(),s:"Call created — "+ct.t+" ("+ct.code+"). Priority "+ct.p+"."});
+  calls.push(c);
+  addCallMarker(c);
+  if(attach){ assignUnitToCall(me,c); setSelfStatus("enroute",true); c.narrative.push({t:now(),s:me.callsign+" en route (self-initiated)."}); }
+  logEvent(me.callsign+" created call #"+c.num+" — "+ct.t+" (P"+ct.p+")","call");
+  closeModal();
+  selectedCallId=c.id;
+  switchView("calls"); renderCalls(); renderCallDetail(); renderDuty(); renderRoster();
+  updateCallsBadge();
+}
+window.createManualCall=createManualCall;
+
+// ---------- CALL FILTERS / SEARCH ----------
+$("callFilters").addEventListener("click",function(e){
+  var b=e.target.closest(".ftab"); if(!b) return;
+  document.querySelectorAll("#callFilters .ftab").forEach(function(x){x.classList.remove("active");});
+  b.classList.add("active"); callFilter=b.dataset.f; renderCalls();
+});
+$("callSearch").addEventListener("input",function(){ callSearch=this.value; renderCalls(); });
+
+// ============================================================
+//  MODAL / CODES
+// ============================================================
+function showModal(html){ $("modal").innerHTML=html; $("modalBg").classList.add("show"); }
+function closeModal(){ $("modalBg").classList.remove("show"); }
+window.closeModal=closeModal;
+$("modalBg").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
+
+var FWPD_SIGNALS=[
+  ["Sig 0","Officer down / in trouble"],["Sig 1","Minor accident"],["2","Major accident"],["3","Hit and run"],
+  ["4","Assault"],["5","Sexual assault"],["7","Burglar alarm (commercial)"],["8","Burglar alarm (residential)"],
+  ["9","Burglar alarm (no permit)"],["10","Burglary"],["11","Cutting / stabbing"],["12","Deceased person"],
+  ["13","Mental health individual"],["14","Disturbance"],["15","Domestic disturbance"],["16","Animal call"],
+  ["18","Domestic phone harassment"],["19","Intoxicated person"],["22","DWI"],["23","Fight"],["25","Fire call"],
+  ["26","Hospital call"],["27","Injured person"],["28","Meet ambulance"],["29","Meet complainant"],
+  ["30","Parking violation"],["31","Traffic violation"],["32","Person with a weapon"],["33","Prisoner pick up"],
+  ["34","Prowler"],["36","Robbery"],["37","Shooting"],["38","Suspicious person / vehicle"],["40","Theft"],
+  ["41","Abandoned vehicle"],["42","Abandoned property"],["43","Coffee break"],["44","Court"],["45","Cancel call"],
+  ["46","Eat"],["47","Escort"],["48","Flat tire"],["49","Garage"],["50","Broadcast / information"],
+  ["51","Investigation"],["52","Loose livestock"],["53","Criminal mischief"],["54","Meet officer / agency"],
+  ["55","Missing person"],["56","Open structure"],["58","Radio repair"],["59","Sector detail"],["60","Stolen vehicle"],
+  ["61","Other"],["62","Unit secured"],["63","Assist"],["64","Call for police, no details"],
+  ["65","Business / residence check"],["67","DCRU"],["68","Commercial hold-up alarm"],["69","Radar"],
+  ["70","Crime scene"],["72","Hotrodders"],["73","Interpret"],["74","Residential panic alarm"],["75","SWAT call out"],
+  ["77","Shots fired"],["78","Hospital guard"],["79","911 hangup / open line"],["80","Teen curfew violation"],
+  ["81","Surveillance"],["82","Warrant preparation"],["83","Warrant service"],["84","Suicide attempt"],
+  ["85","Home invasion"],["86","Kidnapping"],["87","Traffic detail"],["90","Community service"],
+  ["99","Out of the car"],["100","Cobra / bait vehicles"],["360","High water calls"]
+];
+var FWPD_TENCODES=[
+  ["10-1","Receiving poorly"],["10-2","Receiving well"],["10-3","Disregard"],["10-4","Message received"],
+  ["10-5","Relay"],["10-6","Busy / stand by"],["10-7","En route"],["10-8","In service"],["10-9","Repeat"],
+  ["10-10","On minor detail / subject to call"],["10-11","Stay in service"],["10-12","Persons present"],
+  ["10-13","Weather / road information"],["10-14","Convoy / escort"],["10-15","Transporting"],
+  ["10-16","Meet officer at ____"],["10-17","Pick up papers"],["10-18","Anything for me?"],["10-19","Nothing for you"]
+];
+$("codesBtn").onclick=function(){
+  function grid(arr,isSig){ return "<div class='codegrid'>"+arr.map(function(c){ var code=(isSig && /^\d/.test(c[0]))?("Sig "+c[0]):c[0]; return "<div class='c'><b>"+code+"</b><span>"+esc(c[1])+"</span></div>"; }).join("")+"</div>"; }
+  showModal("<div class='modal-h'><h3>FWPD Signals &amp; 10-Codes</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<h3 style='font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 8px'>Signals</h3>"+grid(FWPD_SIGNALS,true)+
+      "<h3 style='font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:16px 0 8px'>10-Codes</h3>"+grid(FWPD_TENCODES,false)+
+    "</div>");
+};
+
+function openAudioModal(){
+  var html=
+    "<div class='modal-h'><h3>🔊 Alert Volume</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p class='hint'>Priority 1 alerts are locked at full volume and can't be turned down. Adjust Priority 2 and Priority 3 below.</p>"+
+      "<div class='field'><label>🔴 Priority 1 — Emergency &nbsp; <span style='color:var(--p1);font-weight:800'>LOCKED · 100%</span></label>"+
+        "<input type='range' min='0' max='100' value='100' disabled>"+
+        "<div class='hint' style='margin-top:4px'>🔒 Always audible — cannot be lowered.</div></div>"+
+      "<div class='field'><label>🟠 Priority 2 — Urgent &nbsp; <span id='v2lbl' style='color:var(--p2);font-weight:700'>"+Math.round(alertVol[2]*100)+"%</span></label>"+
+        "<input id='vol2' type='range' min='0' max='100' value='"+Math.round(alertVol[2]*100)+"'></div>"+
+      "<div class='field'><label>🟢 Priority 3 — Routine &nbsp; <span id='v3lbl' style='color:var(--p3);font-weight:700'>"+Math.round(alertVol[3]*100)+"%</span></label>"+
+        "<input id='vol3' type='range' min='0' max='100' value='"+Math.round(alertVol[3]*100)+"'></div>"+
+      "<div style='display:flex;gap:8px;margin-top:8px'>"+
+        "<button class='btn ghost' style='flex:1' onclick='testTone(1)'>▶ Test P1</button>"+
+        "<button class='btn ghost' style='flex:1' onclick='testTone(2)'>▶ Test P2</button>"+
+        "<button class='btn ghost' style='flex:1' onclick='testTone(3)'>▶ Test P3</button>"+
+      "</div>"+
+      "<p class='hint' style='margin-top:10px'>Tip: set a slider to 0% to mute that priority. (P1 stays on.)</p>"+
+    "</div>";
+  showModal(html);
+  var v2=$("vol2"), v3=$("vol3");
+  v2.oninput=function(){ alertVol[2]=this.value/100; $("v2lbl").textContent=this.value+"%"; saveAlertVol(); };
+  v3.oninput=function(){ alertVol[3]=this.value/100; $("v3lbl").textContent=this.value+"%"; saveAlertVol(); };
+  v2.onchange=function(){ if(alertVol[2]>0) playPriorityTone(2); };
+  v3.onchange=function(){ if(alertVol[3]>0) playPriorityTone(3); };
+}
+window.openAudioModal=openAudioModal;
+if($("audioBtn")) $("audioBtn").onclick=openAudioModal;
+
+// ============================================================
+//  NAV
+// ============================================================
+function switchView(v){
+  document.querySelectorAll(".nav").forEach(function(n){ if(n.dataset.view) n.classList.toggle("active",n.dataset.view===v); });
+  document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
+  $(v+"View").classList.add("active");
+  if(v==="map" && map){ setTimeout(function(){ map.invalidateSize(); },60); }
+  if(v==="units") renderRoster();
+  if(v==="log") renderLog();
+  if(v==="calls") renderCalls();
+  if(v==="bolo") renderBolos();
+  if(v==="records") renderReports();
+  if(v==="shift") renderShift();
+}
+function watchName(d){ var h=d.getHours(); if(h>=5&&h<14) return "Day Watch (1st)"; if(h>=14&&h<22) return "Evening Watch (2nd)"; return "Night Watch (3rd)"; }
+function logShift(unit,text){
+  shiftLogs.unshift({t:Date.now(),unit:unit,text:text});
+  if(shiftLogs.length>200) shiftLogs.pop();
+  try{ localStorage.setItem("cad_shiftlogs", JSON.stringify(shiftLogs)); }catch(e){}
+  if($("shiftView") && $("shiftView").classList.contains("active")) renderShiftLogs();
+}
+function renderShiftLogs(){
+  var box=$("shiftLogs"); if(!box) return;
+  var sup=isSupervisor(), me=self();
+  if($("shiftLogsTitle")) $("shiftLogsTitle").textContent = sup?"All Units — Shift Log (Supervisor view)":"Your Shift Log";
+  var list=shiftLogs.filter(function(e){ return sup || (me && e.unit===me.callsign); });
+  box.innerHTML="";
+  if(list.length===0){ box.innerHTML="<div style='color:var(--muted);font-size:13px'>No shift events yet.</div>"; return; }
+  list.slice(0,80).forEach(function(e){
+    var it=el("div","log-item");
+    it.innerHTML="<span class='lt'>"+hhmmss(new Date(e.t))+"</span><span class='li' style='background:var(--accent)'></span><span class='lx'><b class='mono'>"+esc(e.unit)+"</b> "+esc(e.text)+"</span>";
+    box.appendChild(it);
+  });
+}
+function renderShift(){
+  if(!$("shiftMeta")) return;
+  var me=self(); if(!me) return;
+  $("shiftMeta").innerHTML="On duty since <b>"+hhmm(new Date(shiftStart))+"</b> &nbsp;•&nbsp; "+watchName(new Date(shiftStart))+" &nbsp;•&nbsp; "+me.callsign+" &nbsp;•&nbsp; "+STATUS[me.status].label+(pauseStart?" &nbsp;•&nbsp; <b style='color:var(--p2)'>⏸ PAUSED</b>":"");
+  renderShiftLogs();
+}
+document.querySelectorAll(".nav").forEach(function(n){
+  if(n.dataset.view) n.onclick=function(){ switchView(n.dataset.view); };
+});
+
+// ============================================================
+//  CLOCK + SIMULATION LOOP
+// ============================================================
+function startClock(){
+  function tick(){
+    var d=now();
+    $("tbTime").textContent=hhmmss(d);
+    $("tbDate").textContent=d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+    // refresh visible call timers
+    document.querySelectorAll(".cr-timer").forEach(function(s){ var r=s.getAttribute("data-rec"); if(r) s.textContent=elapsed(parseInt(r,10)); });
+    // live time-on-duty
+    if(shiftStart && $("shiftElapsed")){
+      var de=dutyElapsedMs(), es=Math.floor(de/1000), eh=Math.floor(es/3600), em=Math.floor((es%3600)/60), ess=es%60;
+      $("shiftElapsed").textContent=(eh<10?"0":"")+eh+":"+(em<10?"0":"")+em+":"+(ess<10?"0":"")+ess;
+      var SHIFT_MS=36000000, frac=Math.min(1,de/SHIFT_MS);
+      if($("shiftBar")) $("shiftBar").style.width=(frac*100).toFixed(1)+"%";
+      if($("shiftBarLbl")){
+        var rem=Math.max(0,SHIFT_MS-de);
+        $("shiftBarLbl").textContent = (pauseStart?"⏸ Paused — ":"")+(frac>=1?"Shift complete — 10 hours on duty":Math.round(frac*100)+"% of 10-hour shift  •  "+Math.floor(rem/3600000)+"h "+Math.floor((rem%3600000)/60000)+"m remaining");
+      }
+      var su=self();
+      if(su && su.status==="break" && su.breakStart && !su.breakPinged && (Date.now()-su.breakStart)>1500000){
+        su.breakPinged=true;
+        logEvent("⚠ "+su.callsign+" on break over 25 min — supervisor notified","backup");
+        logShift(su.callsign,"on break over 25 min — supervisor pinged");
+        toast("⚠ Break Exceeded", su.callsign+" has been on break over 25 minutes. Supervisor notified.","backup");
+        alertTone();
+      }
+    }
+  }
+  tick(); setInterval(tick,1000);
+}
+
+// Road routing via OSRM so units follow real streets (never cut across rivers/lakes)
+var routeBusy=0;
+function fetchRoute(u,dlat,dlng){
+  if(u.fetchingRoute||routeBusy>=2) return;
+  u.fetchingRoute=true; routeBusy++;
+  var url="https://router.project-osrm.org/route/v1/driving/"+u.lng+","+u.lat+";"+dlng+","+dlat+"?overview=full&geometries=geojson";
+  fetch(url).then(function(r){return r.json();}).then(function(j){
+    u.fetchingRoute=false; routeBusy--;
+    if(j&&j.routes&&j.routes[0]&&j.routes[0].geometry){
+      u.route=j.routes[0].geometry.coordinates.map(function(c){return {lat:c[1],lng:c[0]};});
+      u.routeI=0;
+    }
+  }).catch(function(){ u.fetchingRoute=false; routeBusy--; });
+}
+function moveUnit(u){
+  // Responding: drive toward the (in-jurisdiction) call
+  if((u.status==="enroute"||u.status==="backup") && u.assignedCallId){
+    var c=callById(u.assignedCallId);
+    if(c){
+      var dx=c.lat-u.lat, dy=c.lng-u.lng, d=Math.sqrt(dx*dx+dy*dy), step=0.0006;
+      if(d<=step){
+        u.lat=c.lat; u.lng=c.lng;
+        if(u.ai){ u.status="onscene"; if(!c.times.onscene)c.times.onscene=Date.now(); c.status="onscene"; if(c.narrative)c.narrative.push({t:now(),s:u.callsign+" on scene."}); }
+      } else { u.lat+=dx/d*step; u.lng+=dy/d*step; }
+    }
+    refreshUnitMarker(u); return;
+  }
+  if(u.status==="onscene"||u.status==="unavailable"||u.status==="break") return; // parked
+  // Patrol: small wander, clamped inside the unit's own division box
+  var b=u.divBox; if(!b){ refreshUnitMarker(u); return; }
+  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
+  var w=cx+b.x0*JD_SX, e=cx+b.x1*JD_SX, s=cy+b.y0*JD_SY, n=cy+b.y1*JD_SY;
+  u.lat += randf(-0.0005,0.0005); u.lng += randf(-0.0005,0.0005);
+  u.lat = Math.max(s, Math.min(n, u.lat));
+  u.lng = Math.max(w, Math.min(e, u.lng));
+  refreshUnitMarker(u);
+}
+
+var streetRefreshTick=0;
+function startSimulation(){
+  // movement + marker refresh
+  setInterval(function(){
+    units.forEach(function(u){ if(!u.isSelf) moveUnit(u); });
+    // self drifts slightly if available/enroute
+    var me=self();
+    if((me.status==="enroute"||me.status==="backup")&&me.assignedCallId){ moveUnit(me); }
+    // otherwise your unit stays at your real location (no drifting)
+    // periodic street refresh for self
+    streetRefreshTick++;
+    if(streetRefreshTick%6===0){
+      queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); }});
+    }
+    // occasionally refresh an AI unit's street
+    if(streetRefreshTick%4===0){
+      var ai=units.filter(function(u){return u.ai;});
+      if(ai.length){ var u=rand(ai); queueGeocode({lat:u.lat,lng:u.lng,set:function(s){ u.street=s; if($("unitsView").classList.contains("active"))renderRoster(); }}); }
+    }
+    updateEnrouteLines();
+    renderDuty();
+  }, 2500);
+
+  // AI auto-respond to unassigned calls
+  setInterval(function(){
+    var pending=calls.filter(function(c){return c.status==="active"&&c.assigned.length===0;});
+    pending.forEach(function(c){
+      if(Math.random()<0.5){
+        var avail=units.filter(function(u){return u.ai&&u.status==="available";});
+        avail.sort(function(a,b){return dist(a,c)-dist(b,c);});
+        if(avail.length){ var u=avail[0]; assignUnitToCall(u,c); u.status="enroute"; refreshCallMarker(c); if($("callsView").classList.contains("active"))renderCalls(); }
+      }
+    });
+    // AI resolves old on-scene calls (not yours) -> feeds the Past Calls history
+    var resolvable=calls.filter(function(c){ return c.status==="onscene" && c.times.onscene && (Date.now()-c.times.onscene)>90000 && c.assigned.indexOf(self().id)<0; });
+    resolvable.forEach(function(c){ if(Math.random()<0.35){ c.narrative.push({t:now(),s:"Units clear — call resolved, Code 4."}); clearCall(c.id); } });
+  }, 6000);
+
+  // new incoming calls
+  function scheduleCall(){
+    var delay = randf(16000, 34000);
+    setTimeout(function(){
+      var roll=Math.random();
+      var prio = roll<0.18?1:roll<0.5?2:3;
+      var c=makeCall(prio);
+      calls.push(c);
+      addCallMarker(c);
+      renderCalls(); renderDuty(); updateCallsBadge();
+      var msg="#"+c.num+" "+c.type+" • "+c.code+" • "+c.street;
+      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+". Units respond.","p1"); playPriorityTone(1); }
+      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street,""); playPriorityTone(c.prio); }
+      scheduleCall();
+    }, delay);
+  }
+  scheduleCall();
+
+  // Supervisor demo events — only fire when logged in as a Supervisor
+  setInterval(function(){
+    if(!isSupervisor()) return;
+    if(Math.random()>0.6) return;
+    var ai=units.filter(function(u){return u.ai;}); if(!ai.length) return;
+    var u=rand(ai), roll=Math.random();
+    if(roll<0.45){
+      var ct=rand(CALL_TYPES);
+      var rp={ id:uid(), num:"FW-26-"+(reportSeq++), by:u.callsign, officerName:u.name, created:Date.now(), status:"review",
+               type:mapCallTypeToOffense(ct.t), occurred:Date.now()-Math.floor(randf(600,7200))*1000,
+               location:u.street||rand(FALLBACK_STREETS), suspectName:"", suspectDesc:"", victimName:rand(["Anonymous","RP on scene","Resident"]),
+               vehicle:"", charges:"", property:"", narrative:"Demo report submitted by "+u.callsign+" for "+ct.t+".",
+               history:[{t:now(),s:"Submitted for review by "+u.callsign}], callNum:null };
+      reports.unshift(rp); updateRecordsBadge();
+      if($("recordsView").classList.contains("active")) renderReports();
+      logEvent("📨 "+u.callsign+" submitted report "+rp.num+" for your review","call");
+      toast("📨 Report Awaiting Review", u.callsign+" submitted "+rp.num+". Approve or return it in Records.","");
+    } else if(roll<0.75){
+      var p= (u.beat && BEAT_POS[u.beat]) ? {lat:BEAT_POS[u.beat].lat,lng:BEAT_POS[u.beat].lng} : randInJurisdiction();
+      var bc={ id:uid(), num:nextCallNum++, type:"Officer Needs Assistance", code:"Sig 0", prio:1, lat:p.lat,lng:p.lng,
+               street:u.street||rand(FALLBACK_STREETS), caller:u.callsign, status:"dispatched", assigned:[u.id],
+               times:{received:Date.now(),dispatched:Date.now()}, narrative:[{t:now(),s:"BACKUP REQUESTED by "+u.callsign}] };
+      u.assignedCallId=bc.id; u.status="backup"; calls.push(bc); if(map) addCallMarker(bc);
+      logEvent("🚨 "+u.callsign+" REQUESTING BACKUP — supervisor notified","backup");
+      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+".","backup");
+      alertTone(); renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
+    } else {
+      logShift(u.callsign,"on break over 25 min — supervisor pinged");
+      logEvent("⚠ "+u.callsign+" exceeded 25-min break — supervisor notified","backup");
+      toast("⚠ Break Exceeded", u.callsign+" has been on break over 25 minutes.","backup");
+    }
+  }, 70000);
+}
+
+// ============================================================
+//  BOLO  (Be On the LookOut)
+// ============================================================
+var bolos=[];
+var boloNum=2201;
+var VEH_MAKES={
+  "Ford":["F-150","F-250","Mustang","Explorer","Escape","Fusion","Crown Victoria","Taurus","Expedition","Ranger","Bronco","Edge"],
+  "Chevrolet":["Silverado","Tahoe","Suburban","Malibu","Impala","Camaro","Equinox","Traverse","Cruze","Colorado","Trailblazer"],
+  "Toyota":["Camry","Corolla","RAV4","Tacoma","Tundra","Highlander","4Runner","Prius","Sienna","Sequoia"],
+  "Honda":["Civic","Accord","CR-V","Pilot","Odyssey","Ridgeline","HR-V"],
+  "Nissan":["Altima","Sentra","Maxima","Rogue","Titan","Frontier","Pathfinder","Versa","Murano"],
+  "Dodge":["Charger","Challenger","Durango","Journey","Grand Caravan"],
+  "RAM":["1500","2500","3500"],
+  "Jeep":["Wrangler","Grand Cherokee","Cherokee","Compass","Gladiator","Renegade"],
+  "GMC":["Sierra","Yukon","Acadia","Terrain","Canyon"],
+  "Hyundai":["Elantra","Sonata","Tucson","Santa Fe","Accent","Palisade"],
+  "Kia":["Optima","Forte","Sorento","Sportage","Soul","Telluride"],
+  "Tesla":["Model 3","Model Y","Model S","Model X","Cybertruck"],
+  "BMW":["3 Series","5 Series","X3","X5","7 Series"],
+  "Mercedes-Benz":["C-Class","E-Class","GLC","GLE","S-Class"],
+  "Subaru":["Outback","Forester","Impreza","Crosstrek","Ascent"],
+  "Volkswagen":["Jetta","Passat","Golf","Tiguan","Atlas"],
+  "Lexus":["RX","ES","IS","GX","NX"],
+  "Chrysler":["300","Pacifica","Town & Country"],
+  "Other":[]
+};
+var BODY_TYPES=["Sedan","Coupe","SUV","Pickup Truck","Van / Minivan","Hatchback","Motorcycle","Other"];
+var VEH_COLORS=["Black","White","Silver","Gray","Red","Blue","Green","Brown","Gold","Yellow","Orange","Maroon","Other"];
+
+function openBoloModal(){
+  var makeOpts=Object.keys(VEH_MAKES).map(function(m){return "<option>"+m+"</option>";}).join("");
+  var bodyOpts=BODY_TYPES.map(function(b){return "<option>"+b+"</option>";}).join("");
+  var colorOpts=VEH_COLORS.map(function(c){return "<option>"+c+"</option>";}).join("");
+  var html=
+    "<div class='modal-h'><h3>🚨 Broadcast BOLO</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p class='hint'>Be On the LookOut — broadcasts to all units and posts to the BOLO board.</p>"+
+      "<div class='row2'>"+
+        "<div class='field'><label>Make</label><select id='boMake'>"+makeOpts+"</select></div>"+
+        "<div class='field'><label>Model</label><select id='boModel'></select></div>"+
+      "</div>"+
+      "<div class='field' id='boModelOtherWrap' style='display:none'><label>Model (type in)</label><input id='boModelOther' placeholder='Model'></div>"+
+      "<div class='row2'>"+
+        "<div class='field'><label>Body Type</label><select id='boBody'>"+bodyOpts+"</select></div>"+
+        "<div class='field'><label>Color</label><select id='boColor'>"+colorOpts+"</select></div>"+
+      "</div>"+
+      "<div class='field' id='boBodyOtherWrap' style='display:none'><label>Body Type (type in)</label><input id='boBodyOther' placeholder='e.g. Box truck, flatbed'></div>"+
+      "<div class='row2'>"+
+        "<div class='field'><label>Year (optional)</label><input id='boYear' placeholder='e.g. 2019' maxlength='4'></div>"+
+        "<div class='field'><label>License Plate</label><input id='boPlate' placeholder='ABC-1234' style='text-transform:uppercase'></div>"+
+      "</div>"+
+      "<div class='field'><label>Last Seen / Direction of Travel</label><input id='boSeen' placeholder='e.g. NB on Main St'></div>"+
+      "<div class='field'><label>Description / Reason</label><textarea class='fld' id='boDesc' placeholder='Wanted for…, # of occupants, damage, suspect info, etc.'></textarea></div>"+
+      "<label style='display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:8px'><input type='checkbox' id='boArmed'> Armed &amp; Dangerous</label>"+
+      "<label style='display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:14px'><input type='checkbox' id='boFelony'> Felony / Use Caution</label>"+
+      "<button class='btn' style='background:linear-gradient(160deg,#ff5252,#b81212)' onclick='submitBolo()'>🚨 Broadcast BOLO</button>"+
+    "</div>";
+  showModal(html);
+  var mk=$("boMake"), md=$("boModel");
+  function fillModels(){
+    var arr=VEH_MAKES[mk.value]||[];
+    md.innerHTML=arr.map(function(m){return "<option>"+m+"</option>";}).join("")+"<option>Other / not listed</option>";
+    toggleModelOther();
+  }
+  function toggleModelOther(){ $("boModelOtherWrap").style.display=(md.value==="Other / not listed")?"block":"none"; }
+  mk.onchange=fillModels; md.onchange=toggleModelOther;
+  $("boBody").onchange=function(){ $("boBodyOtherWrap").style.display=(this.value==="Other")?"block":"none"; };
+  fillModels();
+  $("boSeen").value=self().street||"";
+}
+window.openBoloModal=openBoloModal;
+
+function submitBolo(){
+  var make=$("boMake").value;
+  var model=$("boModel").value; if(model==="Other / not listed") model=($("boModelOther").value.trim()||"Unknown");
+  var body=$("boBody").value; if(body==="Other") body=($("boBodyOther").value.trim()||"");
+  var color=$("boColor").value; if(color==="Other") color="";
+  var b={ id:uid(), num:boloNum++, make:(make==="Other"?"":make), model:model, body:body, color:color,
+          year:$("boYear").value.trim(), plate:$("boPlate").value.trim().toUpperCase(),
+          seen:$("boSeen").value.trim(), desc:$("boDesc").value.trim(),
+          armed:$("boArmed").checked, felony:$("boFelony").checked, by:self().callsign, t:now() };
+  bolos.unshift(b);
+  var veh=[b.year,b.color,b.make,b.model].filter(Boolean).join(" ")||"vehicle";
+  logEvent("📢 BOLO #"+b.num+" issued — "+veh+(b.plate?(" / "+b.plate):"")+(b.armed?" — ARMED & DANGEROUS":"")+" — by "+b.by,"backup");
+  toast("📢 BOLO BROADCAST",(veh.charAt(0).toUpperCase()+veh.slice(1))+(b.plate?(" • "+b.plate):"")+" — all units BOLO.","backup");
+  beep(720,0.18,"square");
+  closeModal();
+  switchView("bolo");
+  renderBolos();
+}
+window.submitBolo=submitBolo;
+
+function clearBolo(id){
+  var b=null; for(var i=0;i<bolos.length;i++){ if(bolos[i].id===id){ b=bolos[i]; break; } }
+  bolos=bolos.filter(function(x){return x.id!==id;});
+  if(b) logEvent("BOLO #"+b.num+" cleared / canceled.","info");
+  renderBolos();
+}
+window.clearBolo=clearBolo;
+
+function updateBoloBadge(){
+  var d=$("boloDot"); if(!d) return;
+  d.textContent=bolos.length;
+  d.classList.toggle("show",bolos.length>0);
+  d.style.background="var(--p1)";
+}
+function renderBolos(){
+  if($("boloCount")) $("boloCount").textContent=bolos.length+" active";
+  updateBoloBadge();
+  var box=$("boloCards"); if(!box) return; box.innerHTML="";
+  if(bolos.length===0){ box.innerHTML="<div style='color:var(--muted);text-align:center;padding:40px 20px'>No active BOLOs. Click <b>＋ Add BOLO</b> to broadcast one to all units.</div>"; return; }
+  bolos.forEach(function(b){
+    var veh=[b.year,b.color,b.make,b.model].filter(Boolean).join(" ")||"Unknown vehicle";
+    var flags="";
+    if(b.armed) flags+="<span class='bolo-flag'>⚠ ARMED &amp; DANGEROUS</span>";
+    if(b.felony) flags+="<span class='bolo-flag'>FELONY / USE CAUTION</span>";
+    var card=el("div","bolo-card");
+    card.innerHTML=
+      "<div class='bolo-hd'><span class='lbl'>● ACTIVE BOLO</span><span class='num'>#"+b.num+" • "+hhmm(b.t)+"</span></div>"+
+      "<div class='bolo-bd'>"+
+        "<div class='bolo-veh'>"+veh+"</div>"+
+        (b.plate?("<div class='bolo-plate'>"+b.plate+"</div>"):"")+
+        "<div class='bolo-grid'>"+
+          "<div><div class='k'>Body Type</div><div class='v'>"+(b.body||"—")+"</div></div>"+
+          "<div><div class='k'>Color</div><div class='v'>"+(b.color||"—")+"</div></div>"+
+          "<div><div class='k'>Last Seen / Direction</div><div class='v'>"+(b.seen||"—")+"</div></div>"+
+          "<div><div class='k'>Plate</div><div class='v'>"+(b.plate||"—")+"</div></div>"+
+        "</div>"+
+        (flags?("<div class='bolo-flags'>"+flags+"</div>"):"")+
+        (b.desc?("<div class='bolo-desc'>"+b.desc+"</div>"):"")+
+        "<div class='bolo-foot'>Issued by <b style='color:var(--text);margin:0 4px'>"+b.by+"</b><button onclick=\"clearBolo('"+b.id+"')\">✓ Clear BOLO</button></div>"+
+      "</div>";
+    box.appendChild(card);
+  });
+}
+
+function runPlate(){
+  var raw=($("plateInput").value||"").trim();
+  var res=$("plateResult");
+  if(!raw){ res.innerHTML="<div class='neutral'>Enter a plate to query.</div>"; return; }
+  var norm=raw.replace(/[\s-]/g,"").toUpperCase();
+  var hit=null;
+  for(var i=0;i<bolos.length;i++){ if((bolos[i].plate||"").replace(/[\s-]/g,"").toUpperCase()===norm && norm){ hit=bolos[i]; break; } }
+  if(hit){
+    var veh=[hit.year,hit.color,hit.make,hit.model].filter(Boolean).join(" ");
+    res.innerHTML="<div class='hit'><b>⚠ BOLO HIT — "+raw.toUpperCase()+"</b><br>"+(veh||"Vehicle")+(hit.seen?(" • last seen "+hit.seen):"")+(hit.armed?" • <b>ARMED &amp; DANGEROUS</b>":"")+"<br>Issued by "+hit.by+" (BOLO #"+hit.num+"). Use caution — confirm before action.</div>";
+    beep(900,0.18,"square"); setTimeout(function(){beep(680,0.2,"square");},180);
+    logEvent("Plate query "+raw.toUpperCase()+" → BOLO HIT (#"+hit.num+")","backup");
+  } else {
+    res.innerHTML="<div class='neutral'>Query <b>"+raw.toUpperCase()+"</b> transmitted to TCIC / NCIC…<br><b>NO RETURN.</b> No active wants, warrants, or registration on file.<br><span style='color:var(--muted)'>Demo mode — live state database is not connected.</span></div>";
+    logEvent("Plate query "+raw.toUpperCase()+" → no return (demo)","info");
+  }
+}
+window.runPlate=runPlate;
+
+if($("addBoloBtn")) $("addBoloBtn").onclick=openBoloModal;
+if($("plateRunBtn")) $("plateRunBtn").onclick=runPlate;
+if($("plateInput")) $("plateInput").addEventListener("keydown",function(e){ if(e.key==="Enter") runPlate(); });
+
+// ============================================================
+//  RECORDS / RMS  (incident reports + supervisor review)
+// ============================================================
+var reports=[];
+var reportSeq=1001;
+var reportFilter="all";
+var editingReportId=null;
+var pendingReportCall=null;
+var OFFENSES=["Theft / Larceny","Burglary","Assault","Robbery","Vehicle Accident","Criminal Mischief","DWI / DUI","Disturbance","Trespassing","Drug Offense","Domestic Incident","Fraud","Missing Person","Warrant Arrest","Traffic Citation","Other"];
+
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function isSupervisor(){ return self() && self().type==="Supervisor"; }
+function reportById(id){ for(var i=0;i<reports.length;i++) if(reports[i].id===id) return reports[i]; return null; }
+function pad2(n){ return (n<10?"0":"")+n; }
+function dtLocalValue(ms){ var d=new Date(ms); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+function dtPretty(ms){ var d=new Date(ms); return d.toLocaleDateString()+" "+hhmm(d); }
+function repStatusBadge(s){
+  var m={draft:["DRAFT","rb-draft"],review:["PENDING REVIEW","rb-review"],approved:["APPROVED","rb-approved"],returned:["RETURNED","rb-returned"]}[s]||["—","rb-draft"];
+  return "<span class='rep-badge "+m[1]+"'>"+m[0]+"</span>";
+}
+function mapCallTypeToOffense(t){
+  t=(t||"").toLowerCase();
+  if(t.indexOf("robbery")>=0) return "Robbery";
+  if(t.indexOf("theft")>=0||t.indexOf("larceny")>=0) return "Theft / Larceny";
+  if(t.indexOf("burglary")>=0) return "Burglary";
+  if(t.indexOf("assault")>=0||t.indexOf("shots")>=0) return "Assault";
+  if(t.indexOf("accident")>=0) return "Vehicle Accident";
+  if(t.indexOf("domestic")>=0) return "Domestic Incident";
+  if(t.indexOf("disturb")>=0||t.indexOf("noise")>=0) return "Disturbance";
+  if(t.indexOf("traffic")>=0) return "Traffic Citation";
+  if(t.indexOf("mischief")>=0||t.indexOf("vandal")>=0) return "Criminal Mischief";
+  return "Other";
+}
+
+function openReportModal(prefill, editId){
+  editingReportId=editId||null;
+  var r=editId?reportById(editId):null;
+  prefill=prefill||{};
+  function val(k){ return r?(r[k]||""):(prefill[k]||""); }
+  var typeOpts=OFFENSES.map(function(o){ var sel=((r&&r.type===o)||(!r&&prefill.type===o))?" selected":""; return "<option"+sel+">"+o+"</option>"; }).join("");
+  var occ=r?r.occurred:(prefill.occurred||Date.now());
+
+  // Past-call dropdown (only on a NEW report) — pick a cleared call to base the report on
+  var callSelect="";
+  if(!editId){
+    var cleared=calls.filter(function(c){return c.status==="cleared";}).sort(function(a,b){return (b.times.cleared||0)-(a.times.cleared||0);});
+    var copts="<option value=''>— None (blank report) —</option>"+cleared.map(function(c){
+      var sel=(prefill.callId===c.id)?" selected":"";
+      return "<option value='"+c.id+"'"+sel+">#"+c.num+" — "+esc(c.type)+" — "+esc(c.street)+" — "+hhmm(new Date(c.times.cleared||c.times.received))+"</option>";
+    }).join("");
+    callSelect="<div class='field'><label>Base Report On a Past Call</label><select id='rpCall'>"+copts+"</select>"+
+      "<div class='hint' style='margin-top:6px'>"+(cleared.length?"Pick a cleared call to auto-fill the type, location & time — then write the report below.":"No cleared calls yet — this will be a blank report.")+"</div></div>";
+  }
+
+  var html=
+    "<div class='modal-h'><h3>"+(editId?"Edit Report":"New Incident Report")+"</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p class='hint'>Reporting Officer: <b>"+esc(self().callsign)+" — "+esc(self().name)+"</b>.</p>"+
+      callSelect+
+      "<div class='row2'>"+
+        "<div class='field'><label>Offense / Incident Type</label><select id='rpType'>"+typeOpts+"</select></div>"+
+        "<div class='field'><label>Occurred (date / time)</label><input id='rpOcc' type='datetime-local' value='"+dtLocalValue(occ)+"'></div>"+
+      "</div>"+
+      "<div class='field'><label>Location</label><input id='rpLoc' value='"+esc(val('location')||self().street||'')+"'></div>"+
+      "<div class='row2'>"+
+        "<div class='field'><label>Suspect Name</label><input id='rpSusName' value='"+esc(val('suspectName'))+"' placeholder='Last, First — or Unknown'></div>"+
+        "<div class='field'><label>Victim / Complainant</label><input id='rpVic' value='"+esc(val('victimName'))+"' placeholder='Name'></div>"+
+      "</div>"+
+      "<div class='field'><label>Suspect Description</label><input id='rpSusDesc' value='"+esc(val('suspectDesc'))+"' placeholder='Sex / race / age / height / clothing'></div>"+
+      "<div class='row2'>"+
+        "<div class='field'><label>Vehicle Involved</label><input id='rpVeh' value='"+esc(val('vehicle'))+"' placeholder='Color / make / model / plate'></div>"+
+        "<div class='field'><label>Charges / Statute</label><input id='rpChg' value='"+esc(val('charges'))+"' placeholder='e.g. PC 31.03 Theft'></div>"+
+      "</div>"+
+      "<div class='field'><label>Property / Evidence</label><input id='rpProp' value='"+esc(val('property'))+"' placeholder='Items, value, evidence #'></div>"+
+      "<div class='field'><label>Narrative — What Happened</label><textarea class='fld' id='rpNarr' placeholder='Describe what occurred, actions taken, statements obtained…'>"+esc(val('narrative'))+"</textarea></div>"+
+      "<div style='display:flex;gap:8px'>"+
+        "<button class='btn ghost' style='flex:1' onclick='saveReport(\"draft\")'>💾 Save Draft</button>"+
+        "<button class='btn' style='flex:1' onclick='saveReport(\"review\")'>📨 Submit for Review</button>"+
+      "</div>"+
+    "</div>";
+  showModal(html);
+
+  var sel=$("rpCall");
+  if(sel){
+    sel.onchange=function(){
+      var cid=this.value;
+      if(!cid){ pendingReportCall=null; return; }
+      var c=callById(cid); if(!c) return;
+      pendingReportCall=c.num;
+      $("rpType").value=mapCallTypeToOffense(c.type);
+      $("rpLoc").value=c.street||"";
+      $("rpOcc").value=dtLocalValue(c.times.received);
+      if(!$("rpNarr").value.trim()) $("rpNarr").value="Ref CAD call #"+c.num+" ("+c.type+"). ";
+    };
+  }
+}
+window.openReportModal=openReportModal;
+
+function saveReport(status){
+  var data={
+    type:$("rpType").value,
+    occurred:$("rpOcc").value?new Date($("rpOcc").value).getTime():Date.now(),
+    location:$("rpLoc").value.trim(),
+    suspectName:$("rpSusName").value.trim(),
+    suspectDesc:$("rpSusDesc").value.trim(),
+    victimName:$("rpVic").value.trim(),
+    vehicle:$("rpVeh").value.trim(),
+    charges:$("rpChg").value.trim(),
+    property:$("rpProp").value.trim(),
+    narrative:$("rpNarr").value.trim()
+  };
+  var r, isNew=false;
+  if(editingReportId){ r=reportById(editingReportId); Object.keys(data).forEach(function(k){ r[k]=data[k]; }); }
+  else {
+    isNew=true;
+    r={ id:uid(), num:"FW-26-"+(reportSeq++), by:self().callsign, officerName:self().name, created:Date.now(), status:"draft", history:[], callNum:(pendingReportCall||null) };
+    Object.keys(data).forEach(function(k){ r[k]=data[k]; });
+    reports.unshift(r);
+    pendingReportCall=null;
+  }
+  r.status=status;
+  r.history.push({t:now(), s:(status==="review"?"Submitted for review":"Saved as draft")+" by "+self().callsign});
+  logEvent("Report "+r.num+" ("+r.type+") "+(status==="review"?"submitted for supervisor review":"saved as draft")+" — "+self().callsign, status==="review"?"call":"info");
+  if(status==="review") toast("📨 Report Submitted", r.num+" sent for supervisor review.","");
+  editingReportId=null;
+  closeModal(); switchView("records"); renderReports();
+}
+window.saveReport=saveReport;
+
+function editReport(id){ openReportModal(null,id); }
+window.editReport=editReport;
+
+function deleteReport(id){
+  if(!confirm("Delete this draft report? This cannot be undone.")) return;
+  reports=reports.filter(function(r){return r.id!==id;});
+  closeModal(); renderReports();
+}
+window.deleteReport=deleteReport;
+
+function setReportStatus(id,status){
+  var r=reportById(id); if(!r) return;
+  var who=self().callsign;
+  var label={draft:"moved to draft",review:"submitted for review",approved:"APPROVED & filed",returned:"returned for correction"}[status];
+  if(status==="approved"||status==="returned") r.reviewedBy=who;
+  r.status=status;
+  r.history.push({t:now(), s:"Report "+label+" by "+who});
+  logEvent("Report "+r.num+" "+label+" — "+who, status==="approved"?"status":status==="returned"?"backup":"call");
+  if(status==="approved") toast("✓ Report Approved", r.num+" approved and filed to records.","");
+  if(status==="returned") toast("↩ Report Returned", r.num+" returned for correction.","p1");
+  closeModal(); renderReports();
+}
+window.setReportStatus=setReportStatus;
+
+function fileReportFromCall(id){
+  var c=callById(id); if(!c) return;
+  pendingReportCall=c.num;
+  openReportModal({ callId:c.id, type:mapCallTypeToOffense(c.type), location:c.street, occurred:c.times.received, narrative:"Ref CAD call #"+c.num+" ("+c.type+"). " });
+}
+window.fileReportFromCall=fileReportFromCall;
+
+function openReportDetail(id){
+  var r=reportById(id); if(!r) return;
+  function cell(k,v){ return "<div class='cd-cell'><div class='k'>"+k+"</div><div class='v'>"+(esc(v)||"—")+"</div></div>"; }
+  var sup=isSupervisor(), actions="";
+  if(r.status==="draft"||r.status==="returned"){
+    actions+="<button class='btn ghost' onclick=\"editReport('"+r.id+"')\">✏️ Edit</button>";
+    actions+="<button class='btn' style='flex:1' onclick=\"setReportStatus('"+r.id+"','review')\">📨 Submit for Review</button>";
+    actions+="<button class='btn ghost' onclick=\"deleteReport('"+r.id+"')\">🗑 Delete</button>";
+  } else if(r.status==="review"){
+    if(sup){
+      actions+="<button class='btn' style='flex:1;background:linear-gradient(160deg,#2ecc71,#1e9e57)' onclick=\"setReportStatus('"+r.id+"','approved')\">✓ Approve</button>";
+      actions+="<button class='btn' style='flex:1;background:linear-gradient(160deg,#ff5252,#b81212)' onclick=\"setReportStatus('"+r.id+"','returned')\">↩ Return for Correction</button>";
+    } else {
+      actions+="<div style='color:var(--muted);font-size:13px;flex:1'>Awaiting supervisor review. (Log in as a Supervisor unit to approve or return.)</div>";
+      actions+="<button class='btn ghost' onclick=\"editReport('"+r.id+"')\">✏️ Edit</button>";
+    }
+  } else if(r.status==="approved"){
+    actions+="<div style='color:var(--good);font-size:13px;flex:1'>✓ Approved"+(r.reviewedBy?(" by "+esc(r.reviewedBy)):"")+" — filed to records.</div>";
+    if(sup) actions+="<button class='btn ghost' onclick=\"setReportStatus('"+r.id+"','review')\">Reopen</button>";
+  }
+  var hist=r.history.slice().reverse().map(function(h){ return "<div class='narr-item'><span class='t'>"+hhmmss(h.t)+"</span><span>"+esc(h.s)+"</span></div>"; }).join("");
+  var html=
+    "<div class='modal-h'><h3 style='display:flex;align-items:center;gap:10px'>"+r.num+" "+repStatusBadge(r.status)+"</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<div style='margin-bottom:10px'><h2 style='margin:0 0 2px;font-size:18px'>"+esc(r.type)+"</h2><div style='color:var(--muted);font-size:12px'>Reporting Officer "+esc(r.by)+" • "+dtPretty(r.occurred)+(r.callNum?(" • from Call #"+r.callNum):"")+"</div></div>"+
+      "<div class='cd-grid'>"+
+        cell("Location",r.location)+
+        cell("Suspect",r.suspectName)+
+        cell("Suspect Description",r.suspectDesc)+
+        cell("Victim / Complainant",r.victimName)+
+        cell("Vehicle",r.vehicle)+
+        cell("Charges / Statute",r.charges)+
+      "</div>"+
+      "<div class='cd-section'><h3>Property / Evidence</h3><div class='bolo-desc' style='background:var(--panel);border-color:var(--line)'>"+(esc(r.property)||"—")+"</div></div>"+
+      "<div class='cd-section'><h3>Narrative</h3><div class='bolo-desc' style='background:var(--panel);border-color:var(--line)'>"+(esc(r.narrative)||"—")+"</div></div>"+
+      "<div class='cd-section'><h3>Status History</h3><div class='narrative'><div class='narr-log'>"+(hist||"<div class='narr-item'><span>No history.</span></div>")+"</div></div></div>"+
+      "<div style='display:flex;gap:8px;align-items:center'>"+actions+"</div>"+
+    "</div>";
+  showModal(html);
+}
+window.openReportDetail=openReportDetail;
+
+function updateRecordsBadge(){
+  var d=$("recDot"); if(!d) return;
+  var pend=reports.filter(function(r){return r.status==="review";}).length;
+  d.textContent=pend;
+  d.classList.toggle("show",pend>0);
+  d.style.background="var(--p2)";
+}
+function renderReports(){
+  if($("recCount")) $("recCount").textContent=reports.length+" report"+(reports.length===1?"":"s");
+  if($("recRole")) $("recRole").style.display=isSupervisor()?"inline-block":"none";
+  updateRecordsBadge();
+  var box=$("reportCards"); if(!box) return;
+  var list=reports.filter(function(r){ return reportFilter==="all"||r.status===reportFilter; });
+  box.innerHTML="";
+  if(list.length===0){
+    box.innerHTML="<div style='color:var(--muted);text-align:center;padding:40px 20px'>"+(reportFilter==="all"?"No reports yet. Click <b>＋ New Report</b>, or open a cleared call and file one.":"No reports in this status.")+"</div>";
+    return;
+  }
+  list.forEach(function(r){
+    var row=el("div","rep-row");
+    row.innerHTML=
+      "<div class='rep-ic'>📄</div>"+
+      "<div class='rm'><div class='rt'>"+esc(r.type)+"</div>"+
+        "<div class='rs'>"+r.num+" • "+esc(r.by)+" • "+dtPretty(r.occurred)+(r.callNum?(" • Call #"+r.callNum):"")+"</div></div>"+
+      repStatusBadge(r.status);
+    row.onclick=function(){ openReportDetail(r.id); };
+    box.appendChild(row);
+  });
+}
+if($("newReportBtn")) $("newReportBtn").onclick=function(){ pendingReportCall=null; openReportModal(); };
+if($("recFilters")) $("recFilters").addEventListener("click",function(e){
+  var b=e.target.closest(".ftab"); if(!b) return;
+  this.querySelectorAll(".ftab").forEach(function(x){x.classList.remove("active");});
+  b.classList.add("active"); reportFilter=b.dataset.rf; renderReports();
+});
+
+// ============================================================
+//  ALPR / RECORDS LOOKUP  (demo — not connected to live DB)
+// ============================================================
+var ALPR_REPORTS={
+  "FW-10-0455":{ num:"FW-10-0455", type:"Motor Vehicle Accident", code:"Sig 2", date:"07/22/2010 14:38",
+    officer:"Frank-12 — Ofc. R. Hale #3344", location:"W Berry St & Hemphill St",
+    driver:"James O'Day", vehicle:"2009 Toyota Land Cruiser (Blue) — TX LCR-4417",
+    charges:"None — non-injury collision; other driver cited for failure to yield",
+    property:"Minor front-end damage to V-1 (Land Cruiser)", status:"approved",
+    narrative:"On 07/22/2010 at approximately 1438 hrs, units responded to a two-vehicle collision at W Berry St and Hemphill St. Driver James O'Day (V-1, blue Toyota Land Cruiser) was traveling northbound when V-2 failed to yield at the posted stop sign and struck V-1 on the front passenger side. No injuries were reported by either party. Both vehicles were drivable. Driver information and insurance were exchanged on scene; the V-2 driver was issued a citation for failure to yield right-of-way. Photographs were taken and the scene was cleared at 1512 hrs. No further action required." }
+};
+var ALPR_PEOPLE=[
+  { id:"jo", fn:"James", ln:"O'Day", dob:"03/14/1989", sex:"M", race:"W", hgt:"5'11\"", wgt:"185", eyes:"BRO",
+    address:"Sycamore School Rd, Fort Worth, TX 76123 (South Div)", dl:"TX 28 441 779", dlStatus:"Valid — no wants / warrants",
+    vehicles:[ {y:2009, mk:"Toyota", md:"Land Cruiser", color:"Blue", plate:"LCR-4417", st:"TX", vin:"JTMHT05J104021xxx", reg:"Valid", exp:"08/2026"} ],
+    infractions:[ {date:"05/02/2018", desc:"Speeding — 12 MPH over limit", disp:"Citation — paid"}, {date:"11/19/2021", desc:"Expired registration", disp:"Warning"} ],
+    calls:[ {date:"07/22/2010", type:"Motor Vehicle Accident", code:"Sig 2", reportId:"FW-10-0455"} ] },
+  { id:"jod", fn:"James", ln:"Odom", dob:"11/02/1976", sex:"M", race:"B", hgt:"6'0\"", wgt:"210", eyes:"BRO",
+    address:"Hemphill St, Fort Worth, TX 76104", dl:"TX 19 220 884", dlStatus:"Valid",
+    vehicles:[ {y:2015, mk:"Ford", md:"F-150", color:"White", plate:"BRT-9921", st:"TX", vin:"1FTEW1EF5FKxxxxx", reg:"Valid", exp:"03/2026"} ],
+    infractions:[], calls:[] },
+  { id:"jode", fn:"Jamie", ln:"O'Dell", dob:"07/30/1994", sex:"F", race:"W", hgt:"5'5\"", wgt:"140", eyes:"GRN",
+    address:"Camp Bowie Blvd, Fort Worth, TX 76107", dl:"TX 33 901 552", dlStatus:"Valid",
+    vehicles:[ {y:2020, mk:"Honda", md:"Civic", color:"Silver", plate:"JKL-2030", st:"TX", vin:"2HGFC2F69LHxxxxx", reg:"Valid", exp:"12/2025"} ],
+    infractions:[ {date:"02/14/2023", desc:"Failure to signal lane change", disp:"Warning"} ], calls:[] }
+];
+function runAlprSearch(){
+  var f=($("dlFirst").value||"").trim().toLowerCase(), l=($("dlLast").value||"").trim().toLowerCase();
+  var box=$("alprResults"); if(!box) return;
+  if(!f && !l){ box.innerHTML="<div style='color:var(--muted);padding:20px;text-align:center'>Enter a first and/or last name to search.</div>"; return; }
+  var list=ALPR_PEOPLE.filter(function(p){ return (!f||p.fn.toLowerCase().indexOf(f)>=0) && (!l||p.ln.toLowerCase().indexOf(l)>=0); });
+  box.innerHTML="<div style='font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:4px 0 8px'>"+list.length+" match"+(list.length===1?"":"es")+"</div>";
+  if(list.length===0){ box.innerHTML+="<div style='color:var(--muted)'>No records found.</div>"; return; }
+  list.forEach(function(p){
+    var row=el("div","rep-row");
+    row.innerHTML="<div class='rep-ic'>👤</div><div class='rm'><div class='rt'>"+esc(p.ln)+", "+esc(p.fn)+"</div>"+
+      "<div class='rs'>DOB "+p.dob+" • "+p.sex+"/"+p.race+" • "+esc(p.address)+"</div></div><span class='rep-badge rb-approved'>"+p.vehicles.length+" veh</span>";
+    row.onclick=function(){ openPersonDetail(p.id); };
+    box.appendChild(row);
+  });
+}
+function personById(id){ for(var i=0;i<ALPR_PEOPLE.length;i++) if(ALPR_PEOPLE[i].id===id) return ALPR_PEOPLE[i]; return null; }
+function openPersonDetail(id){
+  var p=personById(id); if(!p) return;
+  function cell(k,v){ return "<div class='cd-cell'><div class='k'>"+k+"</div><div class='v'>"+(esc(v)||"—")+"</div></div>"; }
+  var veh=p.vehicles.map(function(v){ return "<div class='cd-cell'><div class='k'>Registered Vehicle</div><div class='v'>"+v.y+" "+esc(v.mk)+" "+esc(v.md)+" — "+esc(v.color)+"</div><div style='color:var(--muted);font-size:12px;margin-top:3px'>Plate "+esc(v.st)+" "+esc(v.plate)+" • VIN "+esc(v.vin)+" • Reg "+esc(v.reg)+" (exp "+esc(v.exp)+")</div></div>"; }).join("") || "<span style='color:var(--muted)'>No vehicles on file.</span>";
+  var inf=p.infractions.length? p.infractions.map(function(x){ return "<div class='narr-item'><span class='t'>"+x.date+"</span><span>"+esc(x.desc)+" — <b>"+esc(x.disp)+"</b></span></div>"; }).join("") : "<div class='narr-item'><span>No prior infractions on file.</span></div>";
+  var calls=p.calls.length? p.calls.map(function(x){ return "<div class='unit-chip' style='cursor:pointer;border-color:var(--accent)' onclick=\"openAlprReport('"+x.reportId+"')\">📄 "+x.date+" — "+esc(x.type)+" ("+esc(x.code)+") — view report</div>"; }).join("") : "<span style='color:var(--muted);font-size:13px'>No prior calls on file.</span>";
+  showModal(
+    "<div class='modal-h'><h3>"+esc(p.ln)+", "+esc(p.fn)+"</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<div class='cd-grid'>"+cell("DOB",p.dob)+cell("Sex / Race",p.sex+" / "+p.race)+cell("Height / Weight",p.hgt+" / "+p.wgt+" lbs")+cell("Eyes",p.eyes)+cell("Driver License",p.dl)+cell("DL Status",p.dlStatus)+"</div>"+
+      "<div class='cd-section'><h3>Address</h3><div class='bolo-desc' style='background:var(--panel);border-color:var(--line)'>"+esc(p.address)+"</div></div>"+
+      "<div class='cd-section'><h3>Registered Vehicles</h3>"+veh+"</div>"+
+      "<div class='cd-section'><h3>Prior Infractions</h3><div class='narrative'><div class='narr-log'>"+inf+"</div></div></div>"+
+      "<div class='cd-section'><h3>Prior Calls</h3>"+calls+"</div>"+
+    "</div>");
+}
+window.openPersonDetail=openPersonDetail;
+function openAlprReport(rid){
+  var r=ALPR_REPORTS[rid]; if(!r) return;
+  function cell(k,v){ return "<div class='cd-cell'><div class='k'>"+k+"</div><div class='v'>"+(esc(v)||"—")+"</div></div>"; }
+  showModal(
+    "<div class='modal-h'><h3 style='display:flex;gap:10px;align-items:center'>"+r.num+" <span class='rep-badge rb-approved'>APPROVED</span></h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<h2 style='margin:0 0 2px;font-size:18px'>"+esc(r.type)+"</h2><div style='color:var(--muted);font-size:12px;margin-bottom:10px'>"+esc(r.code)+" • "+r.date+" • "+esc(r.officer)+"</div>"+
+      "<div class='cd-grid'>"+cell("Location",r.location)+cell("Driver",r.driver)+cell("Vehicle",r.vehicle)+cell("Charges",r.charges)+"</div>"+
+      "<div class='cd-section'><h3>Property / Damage</h3><div class='bolo-desc' style='background:var(--panel);border-color:var(--line)'>"+esc(r.property)+"</div></div>"+
+      "<div class='cd-section'><h3>Narrative</h3><div class='bolo-desc' style='background:var(--panel);border-color:var(--line)'>"+esc(r.narrative)+"</div></div>"+
+    "</div>");
+}
+window.openAlprReport=openAlprReport;
+function runAlprPlate(){
+  var raw=($("alprPlate").value||"").trim(), res=$("alprPlateResult");
+  if(!raw){ res.innerHTML="<div class='neutral'>Enter a plate to query.</div>"; return; }
+  var norm=raw.replace(/[\s-]/g,"").toUpperCase(), i, j, k;
+  for(i=0;i<bolos.length;i++){ if((bolos[i].plate||"").replace(/[\s-]/g,"").toUpperCase()===norm && norm){ var b=bolos[i]; res.innerHTML="<div class='hit'><b>⚠ BOLO HIT — "+raw.toUpperCase()+"</b><br>"+([b.year,b.color,b.make,b.model].filter(Boolean).join(" "))+(b.armed?" • ARMED &amp; DANGEROUS":"")+"<br>BOLO #"+b.num+" — use caution.</div>"; beep(900,0.18,"square"); return; } }
+  for(j=0;j<ALPR_PEOPLE.length;j++){ var p=ALPR_PEOPLE[j]; for(k=0;k<p.vehicles.length;k++){ var v=p.vehicles[k]; if((v.plate||"").replace(/[\s-]/g,"").toUpperCase()===norm){
+    res.innerHTML="<div class='neutral'><b>REGISTRATION RETURN — "+esc(v.st)+" "+raw.toUpperCase()+"</b><br>"+v.y+" "+esc(v.mk)+" "+esc(v.md)+" ("+esc(v.color)+") • Reg "+esc(v.reg)+" (exp "+esc(v.exp)+")<br>Owner: <b>"+esc(p.fn)+" "+esc(p.ln)+"</b> — <a href='#' style='color:var(--accent)' onclick=\"openPersonDetail('"+p.id+"');return false;\">view driver</a></div>"; return; } } }
+  res.innerHTML="<div class='neutral'>Query <b>"+raw.toUpperCase()+"</b> → no registration on file. <span style='color:var(--muted)'>Demo mode — live state database not connected.</span></div>";
+}
+window.runAlprPlate=runAlprPlate;
+if($("dlGo")) $("dlGo").onclick=runAlprSearch;
+if($("dlFirst")) $("dlFirst").addEventListener("keydown",function(e){ if(e.key==="Enter") runAlprSearch(); });
+if($("dlLast")) $("dlLast").addEventListener("keydown",function(e){ if(e.key==="Enter") runAlprSearch(); });
+if($("alprPlateGo")) $("alprPlateGo").onclick=runAlprPlate;
+if($("alprPlate")) $("alprPlate").addEventListener("keydown",function(e){ if(e.key==="Enter") runAlprPlate(); });
+
+// ============================================================
+//  RENDER ALL
+// ============================================================
+function renderAll(){
+  renderTopStatus(); renderDuty(); renderRoster(); renderCalls(); renderCallDetail(); renderLog(); updateCallsBadge(); renderBolos(); updateBoloBadge(); renderReports(); updateRecordsBadge();
+}
+</script>
+</body>
+</html>

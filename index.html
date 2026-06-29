@@ -539,7 +539,8 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           <div class="duty-row"><span class="dotc" style="background:var(--unavail)"></span><span class="lbl">Unavailable</span></div>
         </div>
         <div class="map-btn">
-          <button id="recenterBtn" title="Recenter on me / retry GPS">◎</button>
+          <button id="locateBtn" title="Locate me — precise GPS"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><line x1="12" y1="1.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22.5" y2="12"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button>
+          <button id="recenterBtn" title="Recenter on me">◎</button>
           <button id="setLocBtn" title="Set my location by address">📍</button>
           <button id="callsToggleBtn" title="Toggle call pins">📞</button>
         </div>
@@ -1190,6 +1191,26 @@ function setDutyCollapsed(collapsed){
 }
 if($("dutyToggle")) $("dutyToggle").onclick=function(){ setDutyCollapsed($("dutyBody").style.display!=="none"); };
 if(window.innerWidth<=820) setDutyCollapsed(true); // start collapsed on phones
+
+// "Locate Me" — fetch precise high-accuracy GPS now, center & zoom on the officer
+if($("locateBtn")) $("locateBtn").onclick=function(){
+  var u=self(); if(!u) return;
+  if(!navigator.geolocation){ toast("📍 GPS Unavailable","This device/browser has no geolocation.","p1"); return; }
+  var b=this; b.style.opacity="0.5";
+  navigator.geolocation.getCurrentPosition(function(pos){
+    b.style.opacity="1";
+    u.lat=pos.coords.latitude; u.lng=pos.coords.longitude; TOWN.real=true;
+    recenterJurisdiction(u.lat,u.lng);
+    if(map) map.setView([u.lat,u.lng], 16);
+    queueGeocode({lat:u.lat,lng:u.lng,set:function(s){ u.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(u); renderRoster(); }});
+    startLiveLocation();
+    var acc=Math.round(pos.coords.accuracy||0);
+    toast("📍 Located","Centered on your precise location"+(acc?(" (±"+acc+" m)"):"")+".","");
+  }, function(err){
+    b.style.opacity="1";
+    toast("📍 Location Failed", (err&&err.message)?err.message:"Allow location access, then try again.","p1");
+  }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+};
 
 // ---- JURISDICTION: divisions + beats (South = our JD) ----
 var jdLayers=[];

@@ -1275,7 +1275,8 @@ function drawRouteTo(dlat,dlng,label){
       routeLayer=L.polyline([[me.lat,me.lng],[dlat,dlng]],{color:"#3da9fc",weight:4,opacity:0.8,dashArray:"6 8"}).addTo(map);
       try{ map.fitBounds(routeLayer.getBounds().pad(0.3)); }catch(e){}
       var mi=haversineMi(me.lat,me.lng,dlat,dlng);
-      if(info) info.innerHTML="<b>📍 "+mi.toFixed(1)+" mi (direct)</b> &nbsp;<span style='color:var(--muted)'>"+esc(label||"")+" — live road route unavailable</span>";
+      var rdMi=mi*1.3, etaMin=Math.max(1,Math.round(rdMi/28*60)); // ~1.3x road factor, ~28 mph avg
+      if(info) info.innerHTML="<b>📍 ~"+rdMi.toFixed(1)+" mi · ~"+etaMin+" min</b> &nbsp;<span style='color:var(--muted)'>"+esc(label||"")+" — est. (road routing offline)</span>";
     });
 }
 function doRoute(){

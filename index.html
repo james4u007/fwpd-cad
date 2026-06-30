@@ -489,12 +489,25 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 .decomp-head-r{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex:none}
 .decomp-timer{font-size:36px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;line-height:1;background:linear-gradient(180deg,#bdebcf,#5fd39a 60%,#34b07e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 2px 18px rgba(80,210,150,.22)}
 :root[data-theme="light"] .decomp-timer{background:linear-gradient(180deg,#2f9c6c,#1f7a52);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.music-menu{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:340px}
-.music-menu .mbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:#dff5ea;border-radius:18px;padding:6px 11px;font-size:12px;cursor:pointer;transition:all .12s}
-.music-menu .mbtn:hover{background:rgba(255,255,255,.14)}
-.music-menu .mbtn.on{background:rgba(95,211,154,.22);border-color:#5fd39a;color:#eafff4}
-:root[data-theme="light"] .music-menu .mbtn{background:rgba(24,68,48,.05);border-color:rgba(24,68,48,.16);color:#1d5a3e}
-:root[data-theme="light"] .music-menu .mbtn.on{background:rgba(40,150,100,.16);border-color:#2a8160;color:#15452f}
+.decomp-selects{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.dsel{display:flex;flex-direction:column;gap:3px;font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:#9fc8b6}
+:root[data-theme="light"] .dsel{color:#4f7060}
+.dsel select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#e6f7ec;border-radius:9px;padding:6px 9px;font-size:12.5px;text-transform:none;letter-spacing:0;cursor:pointer;outline:none;min-width:120px}
+.dsel select:focus{border-color:#5fd39a}
+:root[data-theme="light"] .dsel select{background:rgba(24,68,48,.05);border-color:rgba(24,68,48,.18);color:#163c2a}
+/* background themes for the decompress canvas */
+.decomp.bg-ocean{background:radial-gradient(120% 90% at 50% 0%,#0e2c3a,#0a2230 55%,#081c29)}
+.decomp.bg-ocean::before{background:radial-gradient(circle,#1f6f8a,transparent 70%)} .decomp.bg-ocean::after{background:radial-gradient(circle,#2f8aa6,transparent 70%)}
+.decomp.bg-sunset{background:radial-gradient(120% 90% at 50% 0%,#3a2230,#2e1a26 55%,#26151f)}
+.decomp.bg-sunset::before{background:radial-gradient(circle,#d9663f,transparent 70%)} .decomp.bg-sunset::after{background:radial-gradient(circle,#b8487a,transparent 70%)}
+.decomp.bg-night{background:radial-gradient(120% 90% at 50% 0%,#101430,#0b0f24 55%,#080b1c)}
+.decomp.bg-night::before{background:radial-gradient(circle,#2a3a8a,transparent 70%)} .decomp.bg-night::after{background:radial-gradient(circle,#3a2f8c,transparent 70%)}
+.decomp.bg-lavender{background:radial-gradient(120% 90% at 50% 0%,#2a2340,#241d36 55%,#1f1830)}
+.decomp.bg-lavender::before{background:radial-gradient(circle,#7a5fd0,transparent 70%)} .decomp.bg-lavender::after{background:radial-gradient(circle,#a06fd0,transparent 70%)}
+:root[data-theme="light"] .decomp.bg-ocean{background:radial-gradient(120% 90% at 50% 0%,#dcf0f5,#e3f1f5 55%,#e7f4f7)}
+:root[data-theme="light"] .decomp.bg-sunset{background:radial-gradient(120% 90% at 50% 0%,#fde8df,#fbeee6 55%,#fdf0ea)}
+:root[data-theme="light"] .decomp.bg-night{background:radial-gradient(120% 90% at 50% 0%,#e6e9f7,#edeff9 55%,#f0f2fb)}
+:root[data-theme="light"] .decomp.bg-lavender{background:radial-gradient(120% 90% at 50% 0%,#efe8fb,#f1ecfb 55%,#f4effc)}
 .break-room{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:11px;margin:10px 0 2px}
 .br-label{font-weight:800;color:#c9efd6;font-size:13px}
 .br-stat{font-size:12.5px;color:#84ad97}.br-stat b{color:#e6f7ec}
@@ -863,13 +876,26 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           <div class="decomp-head">
             <div><h2>🌲 Decompress</h2><p>A quiet minute in the woods, between calls. Breathe with the circle — it leaves the second a call needs you.</p></div>
             <div class="decomp-head-r">
-              <div class="decomp-timer" id="decompTimer">1:00</div>
-              <div class="music-menu" id="musicMenu">
-                <button class="mbtn" data-snd="forest" onclick="selectSound('forest')">🌲 Forest</button>
-                <button class="mbtn" data-snd="rain" onclick="selectSound('rain')">🌧️ Rain</button>
-                <button class="mbtn" data-snd="ocean" onclick="selectSound('ocean')">🌊 Ocean</button>
-                <button class="mbtn" data-snd="lofi" onclick="selectSound('lofi')">🎵 Lo-Fi</button>
-                <button class="mbtn on" data-snd="off" onclick="selectSound('off')">🔇 Off</button>
+              <div class="decomp-timer" id="decompTimer">1:05</div>
+              <div class="decomp-selects">
+                <label class="dsel">🎵 Sound
+                  <select id="soundSelect" onchange="selectSound(this.value)">
+                    <option value="off">Off</option>
+                    <option value="forest">🌲 Forest</option>
+                    <option value="rain">🌧️ Rain</option>
+                    <option value="ocean">🌊 Ocean</option>
+                    <option value="lofi">🎵 Lo-Fi</option>
+                  </select>
+                </label>
+                <label class="dsel">🖼️ Background
+                  <select id="bgSelect" onchange="setDecompBg(this.value)">
+                    <option value="forest">🌲 Forest</option>
+                    <option value="ocean">🌊 Ocean</option>
+                    <option value="sunset">🌇 Sunset</option>
+                    <option value="night">🌌 Night</option>
+                    <option value="lavender">💜 Lavender</option>
+                  </select>
+                </label>
               </div>
             </div>
           </div>
@@ -883,9 +909,10 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
             <div class="decomp-tip" id="decompTip"></div>
             <div class="break-room">
               <span class="br-label">🎮 Break Room</span>
+              <span class="br-stat">Next break <b id="breakMins">0 / 2</b></span>
               <span class="br-stat">Clean calls <b id="perfStreak">0 / 3</b></span>
               <div class="br-bar"><div id="perfBar"></div></div>
-              <span class="br-stat">Tokens <b id="perfTokens">0</b></span>
+              <span class="br-stat">Game tokens <b id="perfTokens">0</b></span>
               <button class="perf-play" onclick="playGame('memory')">🧠 Memory</button>
               <button class="perf-play" onclick="playGame('ttt')">⭕ Tic-Tac-Toe</button>
             </div>
@@ -1062,13 +1089,16 @@ function beep(freq,dur,type,vol){
     o.start(); o.stop(actx.currentTime+(dur||0.18));
   }catch(e){}
 }
+function decompActive(){ var v=document.getElementById("decompressView"); return !!(v && v.classList.contains("active")); }
 function alertTone(){ // P1 / backup — urgent 4-pulse alarm, fixed full volume
+  if(decompActive()) return;   // no call noises while you're decompressing
   beep(1040,0.13,"square",0.55);
   setTimeout(function(){beep(760,0.13,"square",0.55);},150);
   setTimeout(function(){beep(1040,0.13,"square",0.55);},300);
   setTimeout(function(){beep(600,0.26,"square",0.55);},450);
 }
 function playPriorityTone(prio){
+  if(decompActive()) return;                          // silence incoming-call tones during a decompress break
   if(prio===1){ alertTone(); return; }               // Priority 1 — always full volume
   var v=alertVol[prio]; if(v==null||v<=0) return;     // P2/P3 honor the slider (0 = muted)
   if(prio===2){ // urgent rising two-tone
@@ -2039,6 +2069,8 @@ function clearCall(id){
   renderCalls(); renderCallDetail(); renderDuty(); renderRoster();
   units.forEach(refreshUnitMarker);
   if(dspSelCall===id) dspSelCall=null;
+  // Dispatcher earns toward a break: a call they dispatched is now cleared
+  if(session && session.role==="dispatcher" && dispatchedByMe[id]){ delete dispatchedByMe[id]; earnMinuteProgress(); }
   dispatchLiveRefresh();
 }
 window.clearCall=clearCall;
@@ -2470,7 +2502,7 @@ function dspAssignCount(id,n){
   var avail=units.filter(function(u){return u.status==="available" && c.assigned.indexOf(u.id)<0;});
   avail.sort(function(a,b){return dist(a,c)-dist(b,c);});
   var k=0; for(var i=0;i<avail.length && k<n;i++){ var u=avail[i]; assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" dispatched (en route)."}); refreshUnitMarker(u); k++; }
-  if(k>0){ logEvent("Dispatch sent "+k+" unit(s) to #"+c.num+" "+c.type,"call"); toast("🚓 Units Dispatched",k+" unit(s) en route to #"+c.num+" "+c.type+".",""); creditCorrectCall(c.id); }
+  if(k>0){ logEvent("Dispatch sent "+k+" unit(s) to #"+c.num+" "+c.type,"call"); toast("🚓 Units Dispatched",k+" unit(s) en route to #"+c.num+" "+c.type+".",""); creditCorrectCall(c.id); dispatchedByMe[c.id]=true; }
   else toast("No Units Available","No available units to dispatch right now.","backup");
   refreshCallMarker(c); renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge();
 }
@@ -2479,7 +2511,7 @@ function dspUnitClick(id){
   if(dspSelCall){ var c=callById(dspSelCall);
     if(c){ if(u.status!=="available"){ toast("Unit Busy",u.callsign+" is "+STATUS[u.status].label+" — pick an available unit.","backup"); return; }
       assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" assigned by dispatch (en route)."});
-      logEvent("Dispatch assigned "+u.callsign+" → #"+c.num+" "+c.type,"call"); toast("🚓 Assigned",u.callsign+" en route to #"+c.num+".",""); creditCorrectCall(c.id);
+      logEvent("Dispatch assigned "+u.callsign+" → #"+c.num+" "+c.type,"call"); toast("🚓 Assigned",u.callsign+" en route to #"+c.num+".",""); creditCorrectCall(c.id); dispatchedByMe[c.id]=true;
       refreshCallMarker(c); refreshUnitMarker(u); dspSelCall=null; renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge(); return; }
   }
   switchView("map");
@@ -2565,6 +2597,7 @@ function intakeSubmit(){
   toast("📨 Incident Created","#"+c.num+" "+c.type+" sent to Dispatch.","");
   updateCallsBadge(); if($("callsView").classList.contains("active"))renderCalls(); dispatchLiveRefresh();
   creditCorrectCall(c.id);   // a complete, located 911 call handled cleanly
+  earnMinuteProgress();      // call-taker: every 2 reports handed to Dispatch earns a break
   intakeClear(); renderIntake();
 }
 window.intakeSyncPrio=intakeSyncPrio; window.intakeClear=intakeClear; window.intakeSubmit=intakeSubmit;
@@ -2575,11 +2608,22 @@ window.intakeSyncPrio=intakeSyncPrio; window.intakeClear=intakeClear; window.int
 var BREATH_PHASES=["Breathe in…","Hold","Breathe out…","Hold"];
 var DECOMP_TIPS=["Drop your shoulders.","Unclench your jaw.","You handled that one. Reset for the next.","Long, slow exhale — let it go.","Feet on the floor. Slow breath.","One call at a time. You're doing fine.","Relax your hands.","Listen to the wind in the trees.","It's okay to take this minute."];
 var decompTimer=null, decompPhase=0, decompTick=0;
-var decompCredit=60;  // seconds of break available — refilled to 60 each time a call is cleared/reported
+var DECOMP_SECONDS=65;          // a generous 1:05 per earned break
+var decompCredit=0;             // start locked — earned per 2 calls (dispatch) / 2 reports (call-taker)
+var minuteProgress=0;           // dispatch: dispatched+cleared calls; call-taker: reports made
+var dispatchedByMe={};          // calls this dispatcher sent units to
 function fmtSecs(s){ s=Math.max(0,Math.round(s)); var m=Math.floor(s/60),x=s%60; return m+":"+(x<10?"0":"")+x; }
 function grantDecompress(){
-  decompCredit=60;   // one fresh minute per filed report
+  decompCredit=DECOMP_SECONDS;  // a fresh 1:05
   if($("decompressView") && $("decompressView").classList.contains("active")) renderDecompress();
+  updatePerfUI();
+}
+// Earn a break: 2 dispatched+cleared calls (dispatch) OR 2 reports (call-taker) → +1:05
+function earnMinuteProgress(){
+  minuteProgress++;
+  if(minuteProgress>=2){ minuteProgress=0; grantDecompress();
+    toast("🌲 Break Earned (+1:05)","You've earned a minute of decompress. Open the Decompress tab any time.",""); }
+  updatePerfUI();
 }
 function updateBreath(){
   var lbl=$("breathLabel"); if(lbl) lbl.textContent=BREATH_PHASES[decompPhase];
@@ -2667,9 +2711,15 @@ function stopSound(){
   soundNodes=null;
 }
 function stopAmbient(){ stopSound(); currentSound="off"; updateMusicUI(); }
-function selectSound(type){ if(currentSound===type) startSound("off"); else startSound(type); }
-function updateMusicUI(){ document.querySelectorAll("#musicMenu .mbtn").forEach(function(b){ b.classList.toggle("on", b.dataset.snd===currentSound); }); }
-window.selectSound=selectSound;
+function selectSound(type){ startSound(type); }
+function updateMusicUI(){ var s=$("soundSelect"); if(s && s.value!==currentSound) s.value=currentSound; }
+var decompBg="forest";
+function setDecompBg(bg){
+  decompBg=bg;
+  var d=document.querySelector("#decompressView .decomp"); if(!d) return;
+  d.className="decomp bg-"+bg;
+}
+window.selectSound=selectSound; window.setDecompBg=setDecompBg;
 // sweet rising chime when the minute ends
 function decompChime(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); [[659,0],[880,0.13],[1319,0.27]].forEach(function(s){ var t=actx.currentTime+s[1]; var o=actx.createOscillator(); o.type="sine"; var g=actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value=s[0]; g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.0008,t+0.55); o.start(t); o.stop(t+0.6); }); }catch(e){} }
 
@@ -2677,11 +2727,17 @@ function decompChime(){ try{ if(!actx) actx=new (window.AudioContext||window.web
 //  REWARDS — clean calls earn game breaks; rushing gets you fired
 // ============================================================
 var perfCorrect=0, gameTokens=0, perfHandled={};
+function decompRuleText(){
+  var verb=(session&&session.role==="calltaker") ? "file <b>2 reports</b> to Dispatch" : "dispatch &amp; clear <b>2 calls</b>";
+  return "Decompress opens for <b>1:05</b> every time you "+verb+".<br>Progress to your next break: <b>"+minuteProgress+" / 2</b>.";
+}
 function updatePerfUI(){
   var s=$("perfStreak"); if(s) s.textContent=perfCorrect+" / 3";
   var tk=$("perfTokens"); if(tk) tk.textContent=gameTokens;
   var pb=$("perfBar"); if(pb) pb.style.width=Math.min(100,(perfCorrect/3*100))+"%";
+  var bm=$("breakMins"); if(bm) bm.textContent=minuteProgress+" / 2";
   document.querySelectorAll(".perf-play").forEach(function(b){ b.disabled=gameTokens<=0; b.style.opacity=gameTokens>0?"1":".45"; });
+  var lp=document.querySelector("#decompLock p"); if(lp) lp.innerHTML=decompRuleText();
 }
 function creditCorrectCall(id){
   if(id){ if(perfHandled[id]) return; perfHandled[id]=1; }
@@ -2854,7 +2910,6 @@ function aiClearWithReport(c){
     history:[{t:now(),s:"Filed for supervisor review by "+by}], callNum:c.num };
   reports.unshift(rp); if(reports.length>250) reports.pop();
   updateRecordsBadge();
-  if(typeof grantDecompress==="function") grantDecompress();   // each filed report earns a 1-min decompress break
   if($("recordsView") && $("recordsView").classList.contains("active")) renderReports();
   c.narrative.push({t:now(),s:"Units clear — Code 4. Report "+rp.num+" filed by "+by+"."});
   clearCall(c.id);

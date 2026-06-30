@@ -815,16 +815,32 @@ function pumpGeocode(){
   setTimeout(function(){
     var job = geoQueue.shift();
     lastGeo = Date.now();
-    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&lat="+job.lat+"&lon="+job.lng;
-    fetch(url,{headers:{"Accept":"application/json"}}).then(function(r){return r.json();}).then(function(j){
-      var a=j.address||{};
-      var street = a.road||a.pedestrian||a.cycleway||a.footway||a.neighbourhood||a.suburb||a.hamlet||(j.name)||null;
-      job.set(street||rand(FALLBACK_STREETS));
-    }).catch(function(){
-      job.set(rand(FALLBACK_STREETS));
-    }).finally(function(){
+    function finish(street){
+      // Only fall back to a placeholder when BOTH providers gave us nothing — and prefer keeping
+      // the entity's existing street over an unrelated random one (so the label matches the marker).
+      job.set(street || job.cur || rand(FALLBACK_STREETS));
       geoBusy=false; pumpGeocode();
-    });
+    }
+    // Photon reverse first (reliable + CORS-friendly), Nominatim as backup
+    fetch("https://photon.komoot.io/reverse?lat="+job.lat+"&lon="+job.lng)
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){
+        var p=(j.features&&j.features[0]&&j.features[0].properties)||{};
+        var line=[p.housenumber,p.street].filter(Boolean).join(" ");
+        var street = line || p.street || p.name || p.district || p.locality || p.suburb || p.neighbourhood || p.city || null;
+        if(street) return finish(street);
+        throw 0;
+      })
+      .catch(function(){
+        fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&addressdetails=1&lat="+job.lat+"&lon="+job.lng,{headers:{"Accept":"application/json"}})
+          .then(function(r){return r.json();})
+          .then(function(j){
+            var a=j.address||{};
+            var street = a.road||a.pedestrian||a.cycleway||a.footway||a.neighbourhood||a.suburb||a.hamlet||(j.name)||null;
+            finish(street);
+          })
+          .catch(function(){ finish(null); });
+      });
   }, wait);
 }
 
@@ -1011,7 +1027,7 @@ function startLiveLocation(){
     var t=Date.now();
     if(!me._geoT || t-me._geoT>15000){
       me._geoT=t;
-      queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+      queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
     }
     // As you travel, re-center the patrol divisions on you (throttled, only after moving a few km)
     if((Math.abs(me.lat-TOWN.lat)+Math.abs(me.lng-TOWN.lng))>0.025 && (!me._jdT || t-me._jdT>30000)){
@@ -2251,7 +2267,7 @@ function startSimulation(){
     // periodic street refresh for self
     streetRefreshTick++;
     if(streetRefreshTick%6===0){
-      queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); }});
+      queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); }});
     }
     // occasionally refresh an AI unit's street
     if(streetRefreshTick%4===0){

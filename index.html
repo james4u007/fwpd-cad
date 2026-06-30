@@ -1369,10 +1369,10 @@ var DIVISIONS=[
   {name:"West",      c:"#efe0a0", cols:5, clat:32.730, clng:-97.450, dlat:0.065, dlng:0.085, beats:["K11","K12","K13","K14","K15","K16","K17","K18","K19","L11","L12","L13","L14","L15","L16","L17","L18","L19","L21"]},
   {name:"South",     c:"#86efac", cols:5, clat:32.660, clng:-97.345, dlat:0.075, dlng:0.090, beats:["I11","I12","I13","I14","I15","I16","I17","I18","I19","J11","J12","J13","J14","J15","J16","J17","J18","J19","J21"]}
 ];
-// Georeferenced official FWPD patrol-divisions map overlay (bounds from scale-bar + downtown anchor)
-var JD_IMG="fwpd-divisions.png";
-var JD_IMG_BOUNDS=[[32.5186,-97.6063],[33.0847,-97.0215]];
-var jdOverlay=null, jdOverlayOn=true;
+// Official FWPD beat polygons (live GeoJSON from the City of Fort Worth GIS — PD_AWARE/Beat layer)
+var FWPD_BEATS_URL="https://mapit.fortworthtexas.gov/ags/rest/services/Police/PD_AWARE/MapServer/4/query?where=1%3D1&outFields=Division,Beat&returnGeometry=true&outSR=4326&maxAllowableOffset=0.0007&geometryPrecision=5&f=geojson";
+var DIV_FILL={Central:"#4a90d9", North:"#ef6f6f", Northwest:"#b07fe0", East:"#f0a93b", South:"#62c160", West:"#d8c84e"};
+var jdGeoData=null, jdGeoLayer=null, jdOverlayOn=true;
 var PHON={A:"Adam",B:"Boy",C:"Charlie",D:"David",E:"Edward",F:"Frank",G:"George",H:"Henry",I:"Ida",J:"John",K:"King",L:"Lincoln"};
 function beatToCallsign(b){ return (PHON[b.charAt(0)]||b.charAt(0))+"-"+b.replace(/^[A-Z]/,""); }
 var BEAT_POS={};
@@ -1395,19 +1395,31 @@ function randInJurisdiction(){
   return { lat: D.clat+randf(-D.dlat,D.dlat), lng: D.clng+randf(-D.dlng,D.dlng) };
 }
 function clearJd(){ jdLayers.forEach(function(l){ if(map) map.removeLayer(l); }); jdLayers=[]; }
-// Draw the official FWPD patrol-divisions map as a georeferenced overlay (replaces hand-drawn shapes)
+// Render the official FWPD beats as crisp vector polygons (real boundaries + outlines), colored by division
+function styleBeat(f){
+  var d=(f.properties&&f.properties.Division)||"";
+  return { fillColor:DIV_FILL[d]||"#7a8aa0", fillOpacity:0.40, color:"#3a4a5e", weight:0.8, opacity:0.55 };
+}
+function renderBeatLayer(){
+  if(!map) return;
+  if(jdGeoLayer){ map.removeLayer(jdGeoLayer); jdGeoLayer=null; }
+  if(!jdOverlayOn || !jdGeoData) return;
+  jdGeoLayer=L.geoJSON(jdGeoData,{ style:styleBeat, interactive:false }).addTo(map);
+  if(jdGeoLayer.bringToBack) jdGeoLayer.bringToBack();
+}
 function drawJurisdiction(){
   if(!map) return;
-  if(jdOverlay){ map.removeLayer(jdOverlay); jdOverlay=null; }
-  if(jdOverlayOn){
-    jdOverlay=L.imageOverlay(JD_IMG, JD_IMG_BOUNDS, { opacity:0.5, interactive:false, zIndex:250 });
-    jdOverlay.addTo(map);
-  }
   renderJdLegend();
+  if(jdGeoData){ renderBeatLayer(); return; }
+  // instant render from cache, then refresh from the city GIS server
+  try{ var c=localStorage.getItem("fwpd_beats_v2"); if(c){ jdGeoData=JSON.parse(c); renderBeatLayer(); } }catch(e){}
+  fetch(FWPD_BEATS_URL).then(function(r){ return r.json(); }).then(function(j){
+    if(j&&j.features&&j.features.length){ jdGeoData=j; try{ localStorage.setItem("fwpd_beats_v2", JSON.stringify(j)); }catch(e){} renderBeatLayer(); }
+  }).catch(function(){});
 }
 function toggleJdOverlay(){
   jdOverlayOn=!jdOverlayOn;
-  drawJurisdiction();
+  renderBeatLayer();
   var b=$("jdToggleBtn"); if(b) b.style.opacity=jdOverlayOn?"1":"0.45";
 }
 function renderJdLegend(){

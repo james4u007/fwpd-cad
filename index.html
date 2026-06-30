@@ -14,6 +14,16 @@
   --avail:#2ecc71; --enroute:#3da9fc; --onscene:#ff9f1c; --unavail:#7a8a9a; --backup:#ff3b3b;
   --good:#2ecc71; --shadow:0 6px 24px rgba(0,0,0,.45);
 }
+:root[data-theme="light"]{
+  --bg:#eef1f6; --panel:#ffffff; --panel2:#eef2f7; --line:#d3dbe5;
+  --text:#172230; --muted:#5a6979; --accent:#1f6feb; --accent2:#1f6feb;
+  --p1:#e02424; --p2:#cf7a09; --p3:#1e9e57;
+  --shadow:0 8px 24px rgba(40,60,90,.16);
+}
+:root[data-theme="light"] #login{ background:radial-gradient(1200px 600px at 50% -10%,#dde7f4,#eef1f6); }
+:root[data-theme="light"] .ovl-card,
+:root[data-theme="light"] .more-pop{ background:rgba(255,255,255,.96); }
+:root[data-theme="light"] .map-btn button{ background:rgba(255,255,255,.95); }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{
@@ -487,6 +497,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <div class="nm" id="tbNm">Officer</div>
     </div>
     <span class="status-pill" id="tbStatus">AVAILABLE</span>
+    <button class="sbtn" id="themeBtn" title="Light / dark mode">🌙</button>
     <button class="sbtn" id="audioBtn" title="Alert volume">🔊</button>
     <button class="sbtn" id="logoutBtn" title="End shift">⎋</button>
   </div>
@@ -1081,15 +1092,12 @@ function seedCalls(){
 // ============================================================
 function initMap(){
   map = L.map("map",{ zoomControl:true, attributionControl:true }).setView([32.802, -97.314], 11);
-  // Base streets WITHOUT labels (bottom layer)
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",{
-    attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:"abcd", maxZoom:19
-  }).addTo(map);
+  // Base streets WITHOUT labels (bottom layer) — theme-aware tiles
+  var _u=tileUrls();
+  baseTiles=L.tileLayer(_u.base,{ attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:"abcd", maxZoom:19 }).addTo(map);
   // Dedicated pane for street-name labels so they sit ABOVE the division overlay (but below unit markers)
   map.createPane("labels"); var _lp=map.getPane("labels"); _lp.style.zIndex=450; _lp.style.pointerEvents="none";
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",{
-    subdomains:"abcd", maxZoom:19, pane:"labels"
-  }).addTo(map);
+  labelTiles=L.tileLayer(_u.lab,{ subdomains:"abcd", maxZoom:19, pane:"labels" }).addTo(map);
   drawJurisdiction();
   units.forEach(function(u){ addUnitMarker(u); });
   calls.forEach(function(c){ addCallMarker(c); });
@@ -1925,7 +1933,7 @@ $("modalBg").addEventListener("click",function(e){ if(e.target===this) closeModa
 
 var FWPD_SIGNALS=[
   ["Sig 0","Officer down / in trouble"],["Sig 1","Minor accident"],["2","Major accident"],["3","Hit and run"],
-  ["4","Assault"],["5","Sexual assault"],["7","Burglar alarm (commercial)"],["8","Burglar alarm (residential)"],
+  ["4","Assault"],["7","Burglar alarm (commercial)"],["8","Burglar alarm (residential)"],
   ["9","Burglar alarm (no permit)"],["10","Burglary"],["11","Cutting / stabbing"],["12","Deceased person"],
   ["13","Mental health individual"],["14","Disturbance"],["15","Domestic disturbance"],["16","Animal call"],
   ["18","Domestic phone harassment"],["19","Intoxicated person"],["22","DWI"],["23","Fight"],["25","Fire call"],
@@ -2107,6 +2115,32 @@ function hideMorePop(){ var p=$("morePop"); if(p) p.classList.remove("open"); }
     document.addEventListener("click", function(e){ if(pop.classList.contains("open") && !pop.contains(e.target) && !mb.contains(e.target)) pop.classList.remove("open"); });
   }
 })();
+// ============================================================
+//  LIGHT / DARK THEME
+// ============================================================
+var baseTiles=null, labelTiles=null;
+function currentTheme(){ try{ return localStorage.getItem("cad_theme")||"dark"; }catch(e){ return "dark"; } }
+function tileUrls(){
+  if(currentTheme()==="light")
+    return { base:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
+             lab:"https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png" };
+  return { base:"https://{s}.basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}{r}.png",
+           lab:"https://{s}.basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png" };
+}
+function applyTheme(){
+  var t=currentTheme();
+  document.documentElement.setAttribute("data-theme", t);
+  var b=$("themeBtn"); if(b) b.textContent=(t==="light"?"☀️":"🌙");
+  if(typeof map!=="undefined" && map && baseTiles){ var u=tileUrls(); try{ baseTiles.setUrl(u.base); labelTiles.setUrl(u.lab); }catch(e){} }
+}
+function toggleTheme(){
+  var t=(currentTheme()==="light")?"dark":"light";
+  try{ localStorage.setItem("cad_theme", t); }catch(e){}
+  applyTheme();
+}
+if($("themeBtn")) $("themeBtn").onclick=toggleTheme;
+applyTheme();
+
 document.querySelectorAll(".nav").forEach(function(n){
   if(n.dataset.view) n.onclick=function(){ switchView(n.dataset.view); };
 });

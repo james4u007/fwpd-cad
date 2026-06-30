@@ -64,6 +64,10 @@ button{font-family:inherit;cursor:pointer}
 }
 .tb-badge{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(160deg,#1f6feb,#0b3a7a);font-size:20px;flex-shrink:0}
+.brand-wrap{display:flex;justify-content:center;margin:0 auto 14px}
+.brand-logo{height:58px;width:auto;background:#fff;padding:9px 15px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.tb-logo{height:34px;width:auto;background:#fff;padding:4px 8px;border-radius:8px;flex-shrink:0}
+@media(max-width:760px){ .tb-logo{height:28px;padding:3px 6px} .brand-logo{height:48px} }
 .tb-dept{font-weight:700;font-size:15px;line-height:1.1}
 .tb-dept small{display:block;color:var(--muted);font-weight:400;font-size:11px}
 .tb-clock{font-size:15px;color:var(--text);min-width:96px;text-align:center}
@@ -419,7 +423,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 <!-- ===================== LOGIN ===================== -->
 <div id="login">
   <div class="login-card">
-    <div class="badge"><svg viewBox="0 0 64 64" style="width:48px;height:48px"><circle cx="32" cy="32" r="30" fill="#0b2f63" stroke="#ffcf3f" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#9db8de" stroke-width="1" opacity="0.5"/><path d="M32 10 L36.9 24.2 L52 24.5 L40 33.6 L44.3 48 L32 39.4 L19.7 48 L24 33.6 L12 24.5 L27.1 24.2 Z" fill="#ffcf3f" stroke="#c9a836" stroke-width="1"/></svg></div>
+    <div class="brand-wrap"><img class="brand-logo" src="c4-logo.png" alt="Code 4 Dispatch"></div>
     <h1>Computer Aided Dispatch</h1>
     <p class="sub">Fort Worth Police — Unit Login</p>
     <div class="field">
@@ -471,7 +475,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 <div id="app">
   <!-- TOP BAR -->
   <div id="topbar">
-    <div class="tb-badge"><svg viewBox="0 0 64 64" style="width:32px;height:32px"><circle cx="32" cy="32" r="30" fill="#0b2f63" stroke="#ffcf3f" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#9db8de" stroke-width="1" opacity="0.5"/><path d="M32 10 L36.9 24.2 L52 24.5 L40 33.6 L44.3 48 L32 39.4 L19.7 48 L24 33.6 L12 24.5 L27.1 24.2 Z" fill="#ffcf3f" stroke="#c9a836" stroke-width="1"/></svg></div>
+    <img class="tb-logo" src="c4-logo.png" alt="Code 4 Dispatch">
     <div class="tb-dept" id="tbDept">Police Dept<small id="tbDeptSub">Computer Aided Dispatch</small></div>
     <div class="tb-clock"><span id="tbTime">--:--:--</span><small id="tbDate">———</small></div>
     <div class="tb-spacer"></div>

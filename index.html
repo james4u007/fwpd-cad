@@ -896,12 +896,12 @@ function setSelfStatus(s, silent){
   if(!wasPaused && willPause){ pauseStart=Date.now(); }                                   // shift clock pauses
   else if(wasPaused && !willPause){ if(pauseStart){ pausedTotal+=Date.now()-pauseStart; pauseStart=0; } }
   if(prev!==s){
-    if(s==="break"){ u.breakStart=Date.now(); u.breakPinged=false; logShift(u.callsign,"went on break"); }
-    else if(prev==="break"){ u.breakStart=0; logShift(u.callsign,"returned from break"); }
-    if(s==="unavailable"){ logShift(u.callsign,"went unavailable (out of service)"); }
-    else if(prev==="unavailable"){ logShift(u.callsign,"back in service"); }
+    if(s==="break"){ u.breakStart=Date.now(); u.breakPinged=false; }
+    else if(prev==="break"){ u.breakStart=0; }
+    logShift(u.callsign, "status → "+((STATUS[s]&&STATUS[s].label)||s));   // every status change hits the duty log
   }
   u.status=s;
+  if(s!=="enroute" && typeof clearRoute==="function") clearRoute();        // a live route only persists while en route
   renderTopStatus(); renderDuty(); refreshUnitMarker(u); renderRoster();
   renderCallDetail();
   if($("shiftView") && $("shiftView").classList.contains("active")) renderShift();
@@ -1007,7 +1007,7 @@ function startLiveLocation(){
   geoWatchId=navigator.geolocation.watchPosition(function(pos){
     var me=self(); if(!me) return;
     me.lat=pos.coords.latitude; me.lng=pos.coords.longitude; TOWN.real=true;
-    refreshUnitMarker(me); updateEnrouteLines();
+    refreshUnitMarker(me); updateEnrouteLines(); checkSelfArrival();
     var t=Date.now();
     if(!me._geoT || t-me._geoT>15000){
       me._geoT=t;
@@ -1361,6 +1361,27 @@ function routeToCall(id){
   selectedCallId=id; renderCalls();
 }
 window.routeToCall=routeToCall;
+// Open a call's detail when its alert is tapped — go to the call, do NOT auto-route
+function openCall(id){
+  if(!callById(id)) return;
+  selectedCallId=id;
+  switchView("calls");
+  renderCalls(); renderCallDetail();
+}
+window.openCall=openCall;
+// Soft two-note chime when you arrive on scene
+function arrivalSound(){ try{ beep(880,0.12,"sine",0.55); setTimeout(function(){ beep(1245,0.18,"sine",0.55); },140); }catch(e){} }
+// Auto "On Scene" when you get within ~50 ft of the call you're en route to
+var _arrivedCallId=null;
+function checkSelfArrival(){
+  var me=self(); if(!me || me.status!=="enroute" || !me.assignedCallId) return;
+  var c=callById(me.assignedCallId); if(!c) return;
+  if(haversineMi(me.lat,me.lng,c.lat,c.lng) <= 0.0095){   // ~50 feet
+    if(_arrivedCallId===c.id) return; _arrivedCallId=c.id;
+    arrivalSound();
+    callAction(c.id,"onscene");   // marks On Scene, clears the route, logs to the duty log
+  }
+}
 window.doRoute=doRoute;
 if($("routeGo")) $("routeGo").onclick=doRoute;
 if($("routeInput")) $("routeInput").addEventListener("keydown",function(e){ if(e.key==="Enter") doRoute(); });
@@ -1599,7 +1620,7 @@ function renderCallDetail(){
   }
   var actions = isCleared
     ? "<div class='cd-actions'><span style='color:var(--muted);font-weight:800;letter-spacing:.5px;display:flex;align-items:center'>✓ CALL CLEARED — READ ONLY (HISTORY)</span></div>"
-    : "<div class='cd-actions'>"+abtn("enroute","En Route","🚗")+abtn("onscene","On Scene","📍")+
+    : "<div class='cd-actions'>"+abtn("enroute","Route","🧭")+abtn("onscene","On Scene","📍")+
         "<button onclick=\"requestSupervisor('"+c.id+"')\" style='background:#1f6feb;color:#fff;border:none'>🚔 Request Supervisor</button>"+
         "<button class='bk' onclick=\"requestBackupForCall('"+c.id+"')\">🚨 Request Backup</button></div>";
 
@@ -1715,6 +1736,8 @@ function callAction(id,status){
   } else if(status==="enroute"){
     if(c.assigned.indexOf(me.id)<0) assignUnitToCall(me,c);
     c.narrative.push({t:now(),s:me.callsign+" en route."});
+    _arrivedCallId=null;
+    drawRouteTo(c.lat, c.lng, "#"+c.num+" "+c.type+" • "+c.street);   // draw the route — shows on the map
   } else if(status==="available"){
     c.assigned=c.assigned.filter(function(x){return x!==me.id;});
     if(me.assignedCallId===c.id) me.assignedCallId=null;
@@ -2224,6 +2247,7 @@ function startSimulation(){
     var me=self();
     // If live GPS is active, your unit follows your real position — don't auto-drive it to calls
     if(geoWatchId==null && (me.status==="enroute"||me.status==="backup") && me.assignedCallId){ moveUnit(me); }
+    checkSelfArrival();   // auto On Scene within ~50 ft (covers both sim-driven and GPS movement)
     // periodic street refresh for self
     streetRefreshTick++;
     if(streetRefreshTick%6===0){
@@ -2264,8 +2288,8 @@ function startSimulation(){
       addCallMarker(c);
       renderCalls(); renderDuty(); updateCallsBadge();
       var msg="#"+c.num+" "+c.type+" • "+c.code+" • "+c.street;
-      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to route","p1", function(){ routeToCall(c.id); }); playPriorityTone(1); }
-      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to route","", function(){ routeToCall(c.id); }); playPriorityTone(c.prio); }
+      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to open","p1", function(){ openCall(c.id); }); playPriorityTone(1); }
+      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to open","", function(){ openCall(c.id); }); playPriorityTone(c.prio); }
       scheduleCall();
     }, delay);
   }
@@ -2295,7 +2319,7 @@ function startSimulation(){
                times:{received:Date.now(),dispatched:Date.now()}, narrative:[{t:now(),s:"BACKUP REQUESTED by "+u.callsign}] };
       u.assignedCallId=bc.id; u.status="backup"; calls.push(bc); if(map) addCallMarker(bc);
       logEvent("🚨 "+u.callsign+" REQUESTING BACKUP — supervisor notified","backup");
-      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to route","backup", function(){ routeToCall(bc.id); });
+      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to open","backup", function(){ openCall(bc.id); });
       alertTone(); renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
     } else {
       logShift(u.callsign,"on break over 25 min — supervisor pinged");

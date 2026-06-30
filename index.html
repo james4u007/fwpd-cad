@@ -49,6 +49,10 @@ button{font-family:inherit;cursor:pointer}
 }
 .login-card h1{font-size:20px;margin:4px 0 2px;text-align:center}
 .login-card p.sub{margin:0 0 18px;text-align:center;color:var(--muted);font-size:13px}
+.role-tabs{display:flex;gap:6px;margin:0 0 16px}
+.role-tabs .rt{flex:1;padding:9px 5px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:9px;font-size:11.5px;font-weight:600;transition:all .12s}
+.role-tabs .rt.on{border-color:var(--accent);color:var(--text);background:rgba(61,169,252,.14)}
+.role-tabs .rt:hover{color:var(--text)}
 .field{margin-bottom:12px}
 .field label{display:block;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
 .field input,.field select{
@@ -401,6 +405,50 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 .gnote{background:rgba(255,255,255,.04);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;margin:14px 0;font-size:13px;color:var(--muted);line-height:1.5}
 .gnote.gwarn{border-left-color:var(--p1)}
 @media(max-width:760px){ .more-pop{left:62px;width:212px} }
+/* ===== DISPATCH CENTER ===== */
+#dispatchView,#intakeView{flex-direction:column}
+.dsp-head{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.dsp-head h2{margin:0;font-size:17px}
+.dsp-stats{display:flex;gap:16px;font-size:12px;color:var(--muted)}
+.dsp-stats b{color:var(--text);font-size:15px}
+.dsp-body{flex:1;display:flex;min-height:0}
+.dsp-col{flex:1;min-width:0;overflow:auto;padding:12px 14px;border-right:1px solid var(--line)}
+.dsp-col:last-child{border-right:0}
+.dsp-col h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.dcall{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--panel2);cursor:pointer}
+.dcall.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.dcall .top{display:flex;align-items:center;gap:8px}
+.dcall .pr{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#06121d;font-size:13px;flex:none}
+.dcall .ttl{font-weight:700;font-size:14px;flex:1}
+.dcall .meta{color:var(--muted);font-size:12px;margin:5px 0 8px;line-height:1.5}
+.dcall .ctrls{display:flex;flex-wrap:wrap;gap:6px}
+.dcall .ctrls button,.assign-box button{font-size:11.5px;padding:5px 8px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.dcall .ctrls button:hover,.assign-box button:hover{border-color:var(--accent)}
+.assign-box{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--muted)}
+.assign-box select{padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:12px}
+.dunit{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:var(--panel2);cursor:pointer}
+.dunit:hover{border-color:var(--accent)}
+.dunit.sup{border-left:3px solid var(--p2)}
+.dunit .udiv{font-size:10px;font-weight:800;background:var(--accent2);color:#fff;border-radius:5px;padding:2px 6px;min-width:26px;text-align:center;flex:none}
+.dunit .ucs{font-weight:700;font-size:13px;min-width:78px}
+.dunit .ust{font-size:11px;display:flex;align-items:center;gap:5px;margin-left:auto;white-space:nowrap}
+.dunit .ust i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dsp-banner{background:rgba(61,169,252,.14);border:1px solid var(--accent);border-radius:8px;padding:7px 10px;font-size:12px;margin-bottom:10px}
+/* ===== 911 INTAKE ===== */
+.ik-body{flex:1;display:flex;min-height:0}
+.ik-form{flex:1.5;overflow:auto;padding:16px 20px;border-right:1px solid var(--line)}
+.ik-side{flex:1;overflow:auto;padding:16px 18px;background:var(--panel)}
+.ik-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ik-field{display:flex;flex-direction:column;gap:5px}
+.ik-field.full{grid-column:1 / -1}
+.ik-field label{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.ik-field input,.ik-field select,.ik-field textarea{padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.ik-field input:focus,.ik-field select:focus,.ik-field textarea:focus{border-color:var(--accent)}
+.ik-field textarea{min-height:78px;resize:vertical}
+.ik-sec{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--accent);margin:18px 0 2px;grid-column:1/-1;font-weight:700}
+.ik-actions{display:flex;gap:10px;margin-top:18px}
+.ik-card{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px;background:var(--panel2);font-size:13px}
+@media(max-width:820px){ .dsp-body,.ik-body{flex-direction:column} .ik-grid{grid-template-columns:1fr} .dsp-col,.ik-form{border-right:0;border-bottom:1px solid var(--line)} }
 </style>
 </head>
 <body>
@@ -435,7 +483,13 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
   <div class="login-card">
     <div class="brand-wrap"><img class="brand-logo" src="c4-logo.png" alt="Code 4 Dispatch"></div>
     <h1>Computer Aided Dispatch</h1>
-    <p class="sub">Fort Worth Police — Unit Login</p>
+    <p class="sub" id="lg-sub">Fort Worth Police — Unit Login</p>
+    <div class="role-tabs" id="roleTabs">
+      <button type="button" class="rt on" data-role="officer">🚓 Officer</button>
+      <button type="button" class="rt" data-role="dispatcher">🎧 Dispatcher</button>
+      <button type="button" class="rt" data-role="calltaker">📞 911 Call Taker</button>
+    </div>
+    <div id="officerFields">
     <div class="field">
       <label>Department</label>
       <input id="lg-dept" value="Fort Worth Police" readonly>
@@ -475,9 +529,20 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
         <option value="SWAT TacMed">SWAT TacMed</option>
       </select>
     </div>
+    </div><!-- /officerFields -->
+    <div id="staffFields" style="display:none">
+      <div class="field">
+        <label id="staffNameLbl">Dispatcher Name</label>
+        <input id="lg-staffname" value="" placeholder="Your name">
+      </div>
+      <div class="field">
+        <label>Position / ID</label>
+        <input id="lg-staffid" value="" placeholder="e.g. Console 1 / Badge #">
+      </div>
+    </div>
     <div id="lg-err" style="color:var(--p1);font-size:12px;margin-bottom:8px;display:none"></div>
     <button class="btn" id="lg-go">Log On Duty</button>
-    <p class="sub" style="margin-top:12px;margin-bottom:0;font-size:11px">Starts your shift as Available. Demo data is simulated.</p>
+    <p class="sub" id="lg-foot" style="margin-top:12px;margin-bottom:0;font-size:11px">Starts your shift as Available. Demo data is simulated.</p>
   </div>
 </div>
 
@@ -508,6 +573,14 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <button class="nav active" data-view="map">
         <svg viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
         Map
+      </button>
+      <button class="nav" data-view="dispatch" style="display:none">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dispatch
+      </button>
+      <button class="nav" data-view="intake" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        911 Intake
       </button>
       <button class="nav" data-view="calls">
         <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13 1.05.36 2.07.7 3a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.13-1.13a2 2 0 0 1 2.11-.45c.93.34 1.95.57 3 .7A2 2 0 0 1 22 16.92z"/></svg>
@@ -630,7 +703,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
         <div class="sv-head"><h2>Unit Roster</h2><span class="tag" id="unitsCount">0 on duty</span></div>
         <div class="sv-scroll">
           <table class="roster">
-            <thead><tr><th>Call Sign</th><th>Officer</th><th>Type</th><th>Status</th><th>Location</th><th>Assignment</th></tr></thead>
+            <thead><tr><th>Call Sign</th><th>Div</th><th>Officer</th><th>Type</th><th>Status</th><th>Location</th><th>Assignment</th></tr></thead>
             <tbody id="rosterBody"></tbody>
           </table>
         </div>
@@ -711,6 +784,10 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           </div>
         </div>
       </div>
+      <!-- DISPATCH CENTER (dispatcher role) -->
+      <div class="view" id="dispatchView"></div>
+      <!-- 911 CALL TAKING (call-taker role) -->
+      <div class="view" id="intakeView"></div>
       <!-- MORE / GUIDES VIEW (everything behind the "More" wall renders here) -->
       <div class="view" id="moreView"></div>
     </div>
@@ -931,7 +1008,28 @@ function setSelfStatus(s, silent){
 // ============================================================
 $("lg-unit").onchange = function(){ $("lg-badge").value = (this.value==="J-101") ? "S-101" : "S-100"; };
 var UNIT_PW = { "J-100":"hank", "J-101":"Off101" };
+// ---- Login role selector (Officer / Dispatcher / 911 Call Taker) ----
+var loginRole="officer";
+function setLoginRole(r){
+  loginRole=r;
+  document.querySelectorAll("#roleTabs .rt").forEach(function(b){ b.classList.toggle("on", b.dataset.role===r); });
+  var off=r==="officer";
+  $("officerFields").style.display = off?"":"none";
+  $("staffFields").style.display = off?"none":"";
+  $("lg-err").style.display="none";
+  if(r==="officer"){ $("lg-sub").textContent="Fort Worth Police — Unit Login"; $("lg-go").textContent="Log On Duty"; $("lg-foot").textContent="Starts your shift as Available. Demo data is simulated."; }
+  else if(r==="dispatcher"){ $("lg-sub").textContent="Fort Worth Police — Dispatch Center"; $("staffNameLbl").textContent="Dispatcher Name"; $("lg-go").textContent="🎧 Enter Dispatch Center"; $("lg-foot").textContent="Manage units & calls for the whole jurisdiction."; }
+  else { $("lg-sub").textContent="Fort Worth Police — 911 Call Taking"; $("staffNameLbl").textContent="Call Taker Name"; $("lg-go").textContent="📞 Open 911 Call Taking"; $("lg-foot").textContent="Take 911 calls and create incidents for Dispatch."; }
+}
+document.querySelectorAll("#roleTabs .rt").forEach(function(b){ b.onclick=function(){ setLoginRole(b.dataset.role); }; });
 $("lg-go").onclick = function(){
+  if(loginRole!=="officer"){
+    var nm=($("lg-staffname").value||"").trim()||(loginRole==="dispatcher"?"Dispatcher":"Call Taker");
+    var pid=($("lg-staffid").value||"").trim();
+    session = { role:loginRole, name:nm, posid:pid, dept:"Fort Worth Police", callsign:(loginRole==="dispatcher"?"DISPATCH":"911-CT") };
+    startSession();
+    return;
+  }
   var cs = $("lg-unit").value;                       // restricted to J-100 / J-101
   var pw = $("lg-pw").value;
   if(UNIT_PW[cs] && pw !== UNIT_PW[cs]){ var le=$("lg-err"); le.textContent="Incorrect password for "+cs+"."; le.style.display="block"; return; }
@@ -939,9 +1037,9 @@ $("lg-go").onclick = function(){
   var nm = "J. O'Day";
   var type = $("lg-type").value;                      // Patrol / CID / Air / SWAT / SWAT TacMed
   var dept = "Fort Worth Police";
-  session = { callsign:cs, name:nm, badge:badge, type:type, dept:dept };
+  session = { role:"officer", callsign:cs, name:nm, badge:badge, type:type, dept:dept };
   try{ localStorage.setItem("cad_session", JSON.stringify(session)); }catch(e){}
-  startShift();
+  startSession();
 };
 // prefill from last session (only unit + type are user-selectable)
 try{
@@ -964,7 +1062,47 @@ $("logoutBtn").onclick = function(){
   }
 };
 
+function isOfficer(){ return !session || !session.role || session.role==="officer"; }
+function startSession(){
+  if(isOfficer()){ startShift(); return; }
+  startStaffSession();
+}
+// Show/hide UI per role (officer / dispatcher / calltaker)
+function applyRoleUI(){
+  var role = (session&&session.role)||"officer";
+  // top-bar officer-only controls
+  ["selfStatusBtns","backupBtn"].forEach(function(id){ var e=$(id); if(e) e.style.display = role==="officer"?"":"none"; });
+  var pill=$("tbStatus"); if(pill) pill.style.display = role==="officer"?"":"none";
+  // sidebar visibility per role
+  var show = {
+    officer:    {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:1,dispatch:0,intake:0,codes:1,more:1},
+    dispatcher: {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:0,dispatch:1,intake:0,codes:1,more:1},
+    calltaker:  {map:1,calls:1,units:0,bolo:0,records:0,alpr:0,log:1,shift:0,dispatch:0,intake:1,codes:1,more:1}
+  }[role];
+  document.querySelectorAll("#sidebar .nav").forEach(function(n){
+    var key = n.dataset.view || (n.id==="codesBtn"?"codes":(n.id==="moreBtn"?"more":null));
+    if(key && show[key]!=null) n.style.display = show[key]?"":"none";
+  });
+}
+function startStaffSession(){
+  $("login").style.display="none";
+  $("app").style.display="flex";
+  shiftStart=Date.now(); pausedTotal=0; pauseStart=0;
+  try{ shiftLogs=JSON.parse(localStorage.getItem("cad_shiftlogs")||"[]"); }catch(e){ shiftLogs=[]; }
+  applyRoleUI();
+  $("tbDept").childNodes[0].nodeValue = session.dept;
+  $("tbDeptSub").textContent = session.role==="dispatcher" ? "Dispatch Center" : "911 Call Taking";
+  $("tbCs").textContent = session.role==="dispatcher" ? "DISPATCH" : "911 CT";
+  $("tbNm").textContent = session.name + (session.posid?(" • "+session.posid):"");
+  TOWN.lat=32.7555; TOWN.lng=-97.3308; TOWN.real=false;
+  seedUnits(); seedCalls(); initMap(); renderAll(); startClock(); startSimulation();
+  logEvent((session.role==="dispatcher"?"Dispatcher ":"Call taker ")+session.name+" signed on.","info");
+  logShift(session.callsign, "signed on — "+(session.role==="dispatcher"?"Dispatch Center":"911 Call Taking"));
+  switchView(session.role==="dispatcher" ? "dispatch" : "intake");
+  toast(session.role==="dispatcher"?"🎧 Dispatch Center":"📞 911 Call Taking","Signed on as "+session.name+".","");
+}
 function startShift(){
+  applyRoleUI();
   $("login").style.display="none";
   $("app").style.display="flex";
   shiftStart=Date.now(); pausedTotal=0; pauseStart=0;
@@ -1054,30 +1192,34 @@ function randPoint(spread){
 function seedUnits(){
   units=[];
   BEAT_POS=computeBeats();
-  var southDiv=null; for(var d=0;d<DIVISIONS.length;d++){ if(DIVISIONS[d].name==="South") southDiv=DIVISIONS[d]; }
-  // self first — exact real GPS point when available, else a spot near town center; patrols South (J = John)
-  var sp = TOWN.real ? {lat:TOWN.lat,lng:TOWN.lng} : randPoint(0.012);
-  var me={ id:uid(), callsign:session.callsign, name:session.name, badge:session.badge, type:session.type,
-           status:"available", lat:sp.lat, lng:sp.lng, street:"Locating…", isSelf:true, assignedCallId:null,
-           heading:randf(0,360), ai:false, beat:session.callsign, divBox:southDiv };
-  units.push(me);
-  queueGeocode({lat:me.lat,lng:me.lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
-  // AI units — each assigned a real beat; call sign = phonetic letter + beat number (e.g. Adam-12, John-15)
-  var types=["Patrol","Patrol","NPO","Motor","K-9","Air","Supervisor","CID"];
+  var staff = !isOfficer();
   var allBeats=Object.keys(BEAT_POS), used={};
-  var n=8+Math.floor(Math.random()*3);
+  if(!staff){
+    var southDiv=null; for(var d=0;d<DIVISIONS.length;d++){ if(DIVISIONS[d].name==="South") southDiv=DIVISIONS[d]; }
+    var sp = TOWN.real ? {lat:TOWN.lat,lng:TOWN.lng} : randPoint(0.012);
+    var me={ id:uid(), callsign:session.callsign, name:session.name, badge:session.badge, type:session.type,
+             status:"available", lat:sp.lat, lng:sp.lng, street:"Locating…", isSelf:true, assignedCallId:null,
+             heading:randf(0,360), ai:false, beat:session.callsign, divBox:southDiv };
+    units.push(me);
+    queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+  }
+  // AI units — ALL patrol units that actually patrol, plus EXACTLY ONE supervisor
+  var n = staff ? 14 : (9+Math.floor(Math.random()*3));
+  var supIndex = Math.floor(Math.random()*n);
   for(var i=0;i<n;i++){
-    var beat; var tries=0; do{ beat=rand(allBeats); tries++; }while(used[beat] && tries<40); used[beat]=1;
+    var beat; var tries=0; do{ beat=rand(allBeats); tries++; }while(used[beat] && tries<60); used[beat]=1;
     var bp=BEAT_POS[beat];
-    var st = rand(["available","available","available","onscene","enroute"]);
     var u={ id:uid(), callsign:beatToCallsign(beat), beat:beat, name:officerName(),
-            badge:String(1000+Math.floor(Math.random()*8999)), type:types[i%types.length],
-            status:st, lat:bp.lat, lng:bp.lng, street:rand(FALLBACK_STREETS), isSelf:false, assignedCallId:null,
+            badge:String(1000+Math.floor(Math.random()*8999)), type:(i===supIndex?"Supervisor":"Patrol"),
+            status:"available", lat:bp.lat, lng:bp.lng, street:rand(FALLBACK_STREETS), isSelf:false, assignedCallId:null,
             heading:randf(0,360), ai:true, divBox:bp.divBox };
     units.push(u);
-    (function(uu){ queueGeocode({lat:uu.lat,lng:uu.lng,set:function(s){ uu.street=s; refreshUnitMarker(uu); renderRoster(); }}); })(u);
+    (function(uu){ queueGeocode({lat:uu.lat,lng:uu.lng,cur:uu.street,set:function(s){ uu.street=s; refreshUnitMarker(uu); renderRoster(); }}); })(u);
   }
 }
+// Division abbreviation for a unit (C/N/NW/E/S/W)
+var DIV_ABBR={Central:"C",North:"N",Northwest:"NW",East:"E",South:"S",West:"W"};
+function unitDiv(u){ var d=u&&u.divBox&&u.divBox.name; return DIV_ABBR[d]||(d?d.charAt(0):"—"); }
 function makeCall(forcePrio){
   var ct = forcePrio ? rand(CALL_TYPES.filter(function(c){return c.p===forcePrio;})) : rand(CALL_TYPES);
   var p=randInJurisdiction();
@@ -1392,6 +1534,7 @@ function arrivalSound(){ try{ beep(880,0.12,"sine",0.55); setTimeout(function(){
 // Auto "On Scene" when you get within ~50 ft of the call you're en route to
 var _arrivedCallId=null;
 function checkSelfArrival(){
+  if(!isOfficer()) return;   // only the logged-in officer auto-arrives; dispatch/calltaker don't drive a unit
   var me=self(); if(!me || me.status!=="enroute" || !me.assignedCallId) return;
   var c=callById(me.assignedCallId); if(!c) return;
   if(haversineMi(me.lat,me.lng,c.lat,c.lng) <= 0.0095){   // ~50 feet
@@ -1532,7 +1675,8 @@ function renderRoster(){
     var assign = u.assignedCallId ? ("#"+((callById(u.assignedCallId)||{}).num||"")+" "+((callById(u.assignedCallId)||{}).type||"")) : "—";
     var tr=el("tr");
     tr.innerHTML="<td><b class='mono'>"+u.callsign+"</b>"+(u.isSelf?" <span class='tag'>YOU</span>":"")+"</td>"+
-      "<td>#"+u.badge+" "+u.name+"</td><td>"+u.type+"</td>"+
+      "<td><b class='mono' style='color:var(--accent)'>"+unitDiv(u)+"</b></td>"+
+      "<td>#"+u.badge+" "+u.name+"</td><td>"+u.type+(u.type==="Supervisor"?" ⭐":"")+"</td>"+
       "<td><span class='sdot'><i style='background:"+s.hex+"'></i>"+s.label+"</span></td>"+
       "<td>"+u.street+"</td><td>"+assign+"</td>";
     tb.appendChild(tr);
@@ -1789,6 +1933,8 @@ function clearCall(id){
   if(selectedCallId===id) selectedCallId=null;
   renderCalls(); renderCallDetail(); renderDuty(); renderRoster();
   units.forEach(refreshUnitMarker);
+  if(dspSelCall===id) dspSelCall=null;
+  dispatchLiveRefresh();
 }
 window.clearCall=clearCall;
 
@@ -2065,6 +2211,8 @@ function switchView(v){
   if(v==="bolo") renderBolos();
   if(v==="records") renderReports();
   if(v==="shift") renderShift();
+  if(v==="dispatch") renderDispatch();
+  if(v==="intake") renderIntake();
 }
 function watchName(d){ var h=d.getHours(); if(h>=5&&h<14) return "Day Watch (1st)"; if(h>=14&&h<22) return "Evening Watch (2nd)"; return "Night Watch (3rd)"; }
 function logShift(unit,text){
@@ -2167,6 +2315,144 @@ function hideMorePop(){ var p=$("morePop"); if(p) p.classList.remove("open"); }
     document.addEventListener("click", function(e){ if(pop.classList.contains("open") && !pop.contains(e.target) && !mb.contains(e.target)) pop.classList.remove("open"); });
   }
 })();
+// ============================================================
+//  DISPATCH CENTER (dispatcher role)
+// ============================================================
+var dspSelCall=null;
+function dispatchLiveRefresh(){ if($("dispatchView") && $("dispatchView").classList.contains("active")) renderDispatch(); }
+function renderDispatch(){
+  var v=$("dispatchView"); if(!v) return;
+  var act=activeCalls().slice().sort(function(a,b){return a.prio-b.prio || a.times.received-b.times.received;});
+  var availN=units.filter(function(u){return u.status==="available";}).length;
+  var h="<div class='dsp-head'><h2>🎧 Dispatch Center</h2>"+
+    "<div class='dsp-stats'><span><b>"+act.length+"</b> active</span><span><b>"+units.length+"</b> units</span><span><b>"+availN+"</b> available</span></div>"+
+    "<div style='margin-left:auto;display:flex;gap:8px'><button class='sbtn' onclick='dspNewCall()'>＋ New Call</button><button class='sbtn' onclick='renderDispatch()'>⟳ Refresh</button></div></div>";
+  h+="<div class='dsp-body'>";
+  h+="<div class='dsp-col'><h3>Active Calls — priority order</h3>";
+  if(dspSelCall && callById(dspSelCall)) h+="<div class='dsp-banner'>Call #"+callById(dspSelCall).num+" selected — click an available unit on the right to assign it. <a href='#' onclick=\"dspSelectCall(null);return false\" style='color:var(--accent)'>cancel</a></div>";
+  if(!act.length) h+="<div style='color:var(--muted);font-size:13px'>No active calls.</div>";
+  act.forEach(function(c){
+    var aCs=c.assigned.map(function(id){var u=unitById(id);return u?u.callsign:null;}).filter(Boolean).join(", ")||"none";
+    h+="<div class='dcall"+(dspSelCall===c.id?" sel":"")+"' onclick=\"dspSelectCall('"+c.id+"')\">"+
+      "<div class='top'><span class='pr' style='background:"+PRIOCOLOR[c.prio]+"'>"+c.prio+"</span><span class='ttl'>"+esc(c.type)+"</span><span style='color:var(--muted);font-size:12px'>#"+c.num+"</span></div>"+
+      "<div class='meta'>📍 "+esc(c.street)+" · "+esc(c.code)+" · "+esc(c.status.toUpperCase())+"<br>Units: "+esc(aCs)+"</div>"+
+      "<div class='ctrls' onclick='event.stopPropagation()'>"+
+        "<button onclick=\"dspSetPrio('"+c.id+"',1)\">⬆ P1</button><button onclick=\"dspSetPrio('"+c.id+"',2)\">P2</button><button onclick=\"dspSetPrio('"+c.id+"',3)\">⬇ P3</button>"+
+        "<button onclick=\"dspAssignN('"+c.id+"')\">🚓 Dispatch</button><button onclick=\"clearCall('"+c.id+"');renderDispatch();\">✓ Clear</button>"+
+      "</div>"+
+      "<div class='assign-box' onclick='event.stopPropagation()'>Send <select id='cnt_"+c.id+"'><option>1</option><option>2</option><option>3</option><option>4</option></select> nearest unit(s)</div>"+
+    "</div>";
+  });
+  h+="</div>";
+  h+="<div class='dsp-col'><h3>Units On Duty — click to locate"+(dspSelCall?" / assign":"")+"</h3>";
+  units.slice().sort(function(a,b){return a.callsign<b.callsign?-1:1;}).forEach(function(u){
+    var s=STATUS[u.status];
+    h+="<div class='dunit"+(u.type==="Supervisor"?" sup":"")+"' onclick=\"dspUnitClick('"+u.id+"')\">"+
+      "<span class='udiv'>"+unitDiv(u)+"</span><span class='ucs'>"+esc(u.callsign)+(u.type==="Supervisor"?" ⭐":"")+"</span>"+
+      "<span style='font-size:11px;color:var(--muted)'>"+esc(u.type)+"</span>"+
+      "<span class='ust'><i style='background:"+s.hex+"'></i>"+s.label+"</span></div>";
+  });
+  h+="</div></div>";
+  v.innerHTML=h;
+}
+function dspSelectCall(id){ dspSelCall=(id&&dspSelCall===id)?null:id; renderDispatch(); }
+function dspSetPrio(id,p){ var c=callById(id); if(!c)return; c.prio=p; c.narrative.push({t:now(),s:"Priority changed to P"+p+" by dispatch."}); logEvent("Dispatch set #"+c.num+" "+c.type+" → P"+p,"prio"); refreshCallMarker(c); renderDispatch(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge(); }
+function dspAssignN(id){ var sel=$("cnt_"+id); var n=sel?parseInt(sel.value,10):1; dspAssignCount(id,n||1); }
+function dspAssignCount(id,n){
+  var c=callById(id); if(!c)return;
+  var avail=units.filter(function(u){return u.status==="available" && c.assigned.indexOf(u.id)<0;});
+  avail.sort(function(a,b){return dist(a,c)-dist(b,c);});
+  var k=0; for(var i=0;i<avail.length && k<n;i++){ var u=avail[i]; assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" dispatched (en route)."}); refreshUnitMarker(u); k++; }
+  if(k>0){ logEvent("Dispatch sent "+k+" unit(s) to #"+c.num+" "+c.type,"call"); toast("🚓 Units Dispatched",k+" unit(s) en route to #"+c.num+" "+c.type+".",""); }
+  else toast("No Units Available","No available units to dispatch right now.","backup");
+  refreshCallMarker(c); renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge();
+}
+function dspUnitClick(id){
+  var u=unitById(id); if(!u)return;
+  if(dspSelCall){ var c=callById(dspSelCall);
+    if(c){ if(u.status!=="available"){ toast("Unit Busy",u.callsign+" is "+STATUS[u.status].label+" — pick an available unit.","backup"); return; }
+      assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" assigned by dispatch (en route)."});
+      logEvent("Dispatch assigned "+u.callsign+" → #"+c.num+" "+c.type,"call"); toast("🚓 Assigned",u.callsign+" en route to #"+c.num+".","");
+      refreshCallMarker(c); refreshUnitMarker(u); dspSelCall=null; renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge(); return; }
+  }
+  switchView("map");
+  if(map){ map.setView([u.lat,u.lng], 16); var mk=unitMarkers[u.id]; if(mk&&mk.openPopup){ try{mk.openPopup();}catch(e){} } }
+}
+function dspNewCall(){ var c=makeCall(); calls.push(c); addCallMarker(c); logEvent("Dispatch created call #"+c.num+" "+c.type,"call"); renderDispatch(); updateCallsBadge(); if($("callsView").classList.contains("active"))renderCalls(); }
+window.dspSelectCall=dspSelectCall; window.dspSetPrio=dspSetPrio; window.dspAssignN=dspAssignN; window.dspUnitClick=dspUnitClick; window.dspNewCall=dspNewCall;
+
+// ============================================================
+//  911 CALL TAKER (intake) — realistic call-entry screen
+// ============================================================
+function renderIntake(){
+  var v=$("intakeView"); if(!v) return;
+  var typeOpts=CALL_TYPES.map(function(c){return "<option value='"+esc(c.t)+"' data-p='"+c.p+"' data-code='"+esc(c.code)+"'>"+esc(c.t)+" (P"+c.p+")</option>";}).join("");
+  var recent=calls.slice().sort(function(a,b){return b.times.received-a.times.received;}).slice(0,7);
+  var recentHtml=recent.length?recent.map(function(c){ return "<div class='ik-card'><b style='color:"+PRIOCOLOR[c.prio]+"'>P"+c.prio+"</b> #"+c.num+" "+esc(c.type)+"<br><span style='color:var(--muted);font-size:12px'>📍 "+esc(c.street)+" · "+esc(c.status.toUpperCase())+"</span></div>"; }).join(""):"<div style='color:var(--muted);font-size:13px'>No calls yet.</div>";
+  v.innerHTML=
+   "<div class='dsp-head'><h2>📞 911 Call Taking</h2><div class='dsp-stats'><span>Call Taker: <b>"+esc(session.name||"")+"</b></span></div>"+
+     "<div style='margin-left:auto;color:var(--muted);font-size:12px'>Enter the incident, then submit to Dispatch.</div></div>"+
+   "<div class='ik-body'>"+
+     "<div class='ik-form'><div class='ik-grid'>"+
+       "<div class='ik-sec'>Caller</div>"+
+       "<div class='ik-field'><label>Caller Name</label><input id='ik-caller' placeholder='Name or “Anonymous”'></div>"+
+       "<div class='ik-field'><label>Callback Number</label><input id='ik-cb' placeholder='(817) 555-0123'></div>"+
+       "<div class='ik-field'><label>Phone Type</label><select id='ik-ph'><option>Wireless</option><option>Landline</option><option>VoIP</option><option>Text-to-911</option></select></div>"+
+       "<div class='ik-field'><label>Caller is…</label><select id='ik-rel'><option>Caller / RP</option><option>Victim</option><option>Witness</option><option>3rd Party</option><option>Involved Party</option></select></div>"+
+       "<div class='ik-sec'>Location</div>"+
+       "<div class='ik-field full'><label>Incident Address / Location</label><input id='ik-loc' placeholder='2010 W Belknap St, Fort Worth'></div>"+
+       "<div class='ik-field'><label>Apt / Unit / Suite</label><input id='ik-apt' placeholder='Apt 4B'></div>"+
+       "<div class='ik-field'><label>Cross Street / Landmark</label><input id='ik-cross' placeholder='Near…'></div>"+
+       "<div class='ik-sec'>Incident</div>"+
+       "<div class='ik-field'><label>Nature of Call</label><select id='ik-type' onchange='intakeSyncPrio()'>"+typeOpts+"</select></div>"+
+       "<div class='ik-field'><label>Priority</label><select id='ik-prio'><option value='1'>P1 — Emergency</option><option value='2'>P2 — Urgent</option><option value='3'>P3 — Routine</option></select></div>"+
+       "<div class='ik-field'><label># People Involved</label><input id='ik-people' placeholder='e.g. 2'></div>"+
+       "<div class='ik-field'><label>Weapons</label><select id='ik-weapons'><option>None</option><option>Unknown</option><option>Firearm</option><option>Knife / Edged</option><option>Other</option></select></div>"+
+       "<div class='ik-field'><label>Injuries</label><select id='ik-injuries'><option>None</option><option>Unknown</option><option>Minor</option><option>Serious</option><option>Fatal</option></select></div>"+
+       "<div class='ik-field'><label>Suspect still on scene?</label><select id='ik-onscene'><option>Unknown</option><option>Yes</option><option>No / Fled</option></select></div>"+
+       "<div class='ik-field full'><label>Suspect / Vehicle Description</label><input id='ik-susp' placeholder='B/M, red hoodie, fled in silver sedan…'></div>"+
+       "<div class='ik-field full'><label>Caller Statement / Narrative</label><textarea id='ik-narr' placeholder='What is happening? Exactly what the caller reports…'></textarea></div>"+
+     "</div>"+
+     "<div class='ik-actions'><button class='btn' style='width:auto' onclick='intakeSubmit()'>📨 Create Incident → Dispatch</button><button class='btn ghost' onclick='intakeClear()'>Clear Form</button></div>"+
+     "</div>"+
+     "<div class='ik-side'><h3 style='margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)'>Recent / Active Calls</h3>"+recentHtml+
+       "<div style='margin-top:18px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12.5px;color:var(--muted);line-height:1.6'>📋 <b style='color:var(--text)'>Call-taker tips</b><br>• Verify the address first.<br>• Keep the caller on the line.<br>• Weapons / injuries set priority.<br>• Submit creates a live incident the dispatcher assigns.</div>"+
+     "</div>"+
+   "</div>";
+}
+function intakeSyncPrio(){ var sel=$("ik-type"); if(!sel)return; var o=sel.options[sel.selectedIndex]; var p=o&&o.getAttribute("data-p"); if(p&&$("ik-prio")) $("ik-prio").value=p; }
+function intakeClear(){ ["ik-caller","ik-cb","ik-loc","ik-apt","ik-cross","ik-people","ik-susp","ik-narr"].forEach(function(id){ var e=$(id); if(e)e.value=""; }); if($("ik-weapons"))$("ik-weapons").value="None"; if($("ik-injuries"))$("ik-injuries").value="None"; }
+function intakeSubmit(){
+  var sel=$("ik-type"); var o=sel?sel.options[sel.selectedIndex]:null;
+  var typeVal=sel?sel.value:"Disturbance";
+  var code=(o&&o.getAttribute("data-code"))||"Sig 0";
+  var prio=parseInt(($("ik-prio")&&$("ik-prio").value)||"3",10);
+  var addr=(($("ik-loc")&&$("ik-loc").value)||"").trim();
+  var apt=(($("ik-apt")&&$("ik-apt").value)||"").trim();
+  var p=randInJurisdiction();
+  var c={ id:uid(), num:nextCallNum++, type:typeVal, code:code, prio:prio,
+          lat:p.lat, lng:p.lng, street:(addr?(addr+(apt?(" #"+apt):"")):rand(FALLBACK_STREETS)),
+          caller:(($("ik-caller")&&$("ik-caller").value)||"Anonymous"),
+          status:"active", assigned:[], times:{received:Date.now()}, narrative:[] };
+  c.narrative.push({t:now(),s:"911 call received by "+(session.name||"call taker")+". Nature: "+typeVal+" (P"+prio+")."});
+  var d=[];
+  var cb=($("ik-cb")&&$("ik-cb").value); if(cb) d.push("Callback "+cb);
+  var ppl=($("ik-people")&&$("ik-people").value); if(ppl) d.push(ppl+" involved");
+  var w=($("ik-weapons")&&$("ik-weapons").value); if(w&&w!=="None") d.push("Weapons: "+w);
+  var inj=($("ik-injuries")&&$("ik-injuries").value); if(inj&&inj!=="None") d.push("Injuries: "+inj);
+  var os=($("ik-onscene")&&$("ik-onscene").value); if(os&&os!=="Unknown") d.push("Suspect on scene: "+os);
+  if(d.length) c.narrative.push({t:now(),s:d.join(" • ")});
+  var susp=($("ik-susp")&&$("ik-susp").value); if(susp) c.narrative.push({t:now(),s:"Susp/Veh: "+susp});
+  var narr=($("ik-narr")&&$("ik-narr").value); if(narr) c.narrative.push({t:now(),s:"Caller: "+narr});
+  calls.push(c); addCallMarker(c);
+  if(addr){ geocodeAddress(addr).then(function(loc){ if(loc){ c.lat=loc.lat; c.lng=loc.lng; refreshCallMarker(c); } }); }
+  logEvent("📞 911 entered by "+(session.name||"CT")+" — #"+c.num+" "+c.type+" (P"+prio+")","call");
+  toast("📨 Incident Created","#"+c.num+" "+c.type+" sent to Dispatch.","");
+  updateCallsBadge(); if($("callsView").classList.contains("active"))renderCalls(); dispatchLiveRefresh();
+  intakeClear(); renderIntake();
+}
+window.intakeSyncPrio=intakeSyncPrio; window.intakeClear=intakeClear; window.intakeSubmit=intakeSubmit;
+
 // ============================================================
 //  LIGHT / DARK THEME
 // ============================================================
@@ -2272,15 +2558,17 @@ function startSimulation(){
   // movement + marker refresh
   setInterval(function(){
     units.forEach(function(u){ if(!u.isSelf) moveUnit(u); });
-    // self drifts slightly if available/enroute
-    var me=self();
-    // If live GPS is active, your unit follows your real position — don't auto-drive it to calls
-    if(geoWatchId==null && (me.status==="enroute"||me.status==="backup") && me.assignedCallId){ moveUnit(me); }
-    checkSelfArrival();   // auto On Scene within ~50 ft (covers both sim-driven and GPS movement)
-    // periodic street refresh for self
     streetRefreshTick++;
-    if(streetRefreshTick%6===0){
-      queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); }});
+    if(isOfficer()){
+      // self drifts slightly if available/enroute
+      var me=self();
+      // If live GPS is active, your unit follows your real position — don't auto-drive it to calls
+      if(geoWatchId==null && (me.status==="enroute"||me.status==="backup") && me.assignedCallId){ moveUnit(me); }
+      checkSelfArrival();   // auto On Scene within ~50 ft (covers both sim-driven and GPS movement)
+      // periodic street refresh for self
+      if(streetRefreshTick%6===0){
+        queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); }});
+      }
     }
     // occasionally refresh an AI unit's street
     if(streetRefreshTick%4===0){
@@ -2315,7 +2603,7 @@ function startSimulation(){
       var c=makeCall(prio);
       calls.push(c);
       addCallMarker(c);
-      renderCalls(); renderDuty(); updateCallsBadge();
+      renderCalls(); renderDuty(); updateCallsBadge(); dispatchLiveRefresh();
       var msg="#"+c.num+" "+c.type+" • "+c.code+" • "+c.street;
       if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to open","p1", function(){ openCall(c.id); }); playPriorityTone(1); }
       else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to open","", function(){ openCall(c.id); }); playPriorityTone(c.prio); }

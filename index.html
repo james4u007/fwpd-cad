@@ -508,6 +508,13 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 :root[data-theme="light"] .decomp.bg-sunset{background:radial-gradient(120% 90% at 50% 0%,#fde8df,#fbeee6 55%,#fdf0ea)}
 :root[data-theme="light"] .decomp.bg-night{background:radial-gradient(120% 90% at 50% 0%,#e6e9f7,#edeff9 55%,#f0f2fb)}
 :root[data-theme="light"] .decomp.bg-lavender{background:radial-gradient(120% 90% at 50% 0%,#efe8fb,#f1ecfb 55%,#f4effc)}
+/* crossfading nature photos */
+.decomp-photos{position:absolute;inset:0;z-index:0;overflow:hidden}
+.dphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.6s ease;transform:scale(1.04)}
+.dphoto.show{opacity:1}
+.decomp-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,18,14,.30),rgba(6,18,14,.58))}
+:root[data-theme="light"] .decomp-scrim{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.42))}
+.decomp.has-photo::before,.decomp.has-photo::after{opacity:.18}
 .break-room{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:11px;margin:10px 0 2px}
 .br-label{font-weight:800;color:#c9efd6;font-size:13px}
 .br-stat{font-size:12.5px;color:#84ad97}.br-stat b{color:#e6f7ec}
@@ -873,6 +880,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <!-- DECOMPRESS (dispatcher & call-taker) -->
       <div class="view" id="decompressView">
         <div class="decomp">
+          <div class="decomp-photos" id="decompPhotos"></div>
           <div class="decomp-head">
             <div><h2>🌲 Decompress</h2><p>A quiet minute in the woods, between calls. Breathe with the circle — it leaves the second a call needs you.</p></div>
             <div class="decomp-head-r">
@@ -913,8 +921,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
               <span class="br-stat">Clean calls <b id="perfStreak">0 / 3</b></span>
               <div class="br-bar"><div id="perfBar"></div></div>
               <span class="br-stat">Game tokens <b id="perfTokens">0</b></span>
-              <button class="perf-play" onclick="playGame('memory')">🧠 Memory</button>
-              <button class="perf-play" onclick="playGame('ttt')">⭕ Tic-Tac-Toe</button>
+              <button class="perf-play" onclick="playGame('ttt')">⭕ Play Tic-Tac-Toe</button>
             </div>
             <div class="decomp-note">Box breathing · in 4 · hold 4 · out 4 · hold 4. Handle calls cleanly to earn game tokens.</div>
           </div>
@@ -2350,7 +2357,7 @@ function switchView(v){
   if(v==="shift") renderShift();
   if(v==="dispatch") renderDispatch();
   if(v==="intake") renderIntake();
-  if(v==="decompress") renderDecompress();
+  if(v==="decompress"){ renderDecompress(); startSlideshow(decompBg); }
   if(v!=="decompress" && typeof stopDecompress==="function") stopDecompress();  // ambient/breathing never runs outside Decompress
 }
 function watchName(d){ var h=d.getHours(); if(h>=5&&h<14) return "Day Watch (1st)"; if(h>=14&&h<22) return "Evening Watch (2nd)"; return "Night Watch (3rd)"; }
@@ -2655,7 +2662,7 @@ function renderDecompress(){
     }
   }, 1000);
 }
-function stopDecompress(){ if(decompTimer){ clearInterval(decompTimer); decompTimer=null; } stopAmbient(); }
+function stopDecompress(){ if(decompTimer){ clearInterval(decompTimer); decompTimer=null; } stopAmbient(); stopSlideshow(); slideBg=null; }
 
 // ---- Music: selectable synthesized soundscapes (Forest / Rain / Ocean / Lo-Fi) ----
 var soundNodes=null, currentSound="off";
@@ -2688,13 +2695,27 @@ function startSound(type){
       var lfo2=actx.createOscillator(); lfo2.frequency.value=0.13; var lg2=actx.createGain(); lg2.gain.value=180; lfo2.connect(lg2); lg2.connect(lp.frequency); lfo2.start();
       n.start(); parts.srcs.push(n); parts.oscs.push(lfo,lfo2); target=0.6;
     } else if(type==="lofi"){
-      var chords=[[220,277.18,329.63],[196,246.94,293.66],[174.61,220,261.63],[246.94,311.13,369.99]];
-      var pad=actx.createGain(); pad.gain.value=0.0001; var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=900; pad.connect(lp); lp.connect(master);
+      // warm mellow pad + a gentle music-box melody — calm, not harsh
+      var chords=[[130.81,164.81,196.0],[110.0,146.83,174.61],[98.0,130.81,164.81],[146.83,185.0,220.0]]; // low, warm
+      var pad=actx.createGain(); pad.gain.value=0.0001;
+      var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=620; lp.Q.value=0.4;
+      pad.connect(lp); lp.connect(master);
       var voices=[actx.createOscillator(),actx.createOscillator(),actx.createOscillator()];
-      voices.forEach(function(o){ o.type="triangle"; var g=actx.createGain(); g.gain.value=0.33; o.connect(g); g.connect(pad); o.start(); parts.oscs.push(o); });
-      var ci={v:0}; function setChord(){ var c=chords[ci.v%chords.length]; voices.forEach(function(o,i){ try{o.frequency.setTargetAtTime(c[i],actx.currentTime,1.2);}catch(e){} }); ci.v++; parts.timers.push(setTimeout(setChord,7000)); }
-      setChord(); pad.gain.linearRampToValueAtTime(0.5, actx.currentTime+3);
-      var nb=actx.createBufferSource(); nb.buffer=_brownBuf(); nb.loop=true; var lpb=actx.createBiquadFilter(); lpb.type="lowpass"; lpb.frequency.value=300; var gb=actx.createGain(); gb.gain.value=0.1; nb.connect(lpb); lpb.connect(gb); gb.connect(master); nb.start(); parts.srcs.push(nb); target=0.42;
+      voices.forEach(function(o){ o.type="sine"; var g=actx.createGain(); g.gain.value=0.34; o.connect(g); g.connect(pad); o.start(); parts.oscs.push(o); });
+      var ci={v:0}; function setChord(){ var c=chords[ci.v%chords.length]; voices.forEach(function(o,i){ try{o.frequency.setTargetAtTime(c[i],actx.currentTime,2.0);}catch(e){} }); ci.v++; parts.timers.push(setTimeout(setChord,8500)); }
+      setChord(); pad.gain.linearRampToValueAtTime(0.42, actx.currentTime+3.5);
+      // soft music-box melody (C major pentatonic), bell-like, slow & sparse
+      var scale=[523.25,587.33,659.25,783.99,880.0,1046.5];
+      function pluck(){ try{ var t=actx.currentTime, f=scale[Math.floor(Math.random()*scale.length)];
+        var o=actx.createOscillator(); o.type="triangle"; var g=actx.createGain(); g.gain.value=0;
+        var lpf=actx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=2400;
+        o.connect(g); g.connect(lpf); lpf.connect(master); o.frequency.value=f;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.11,t+0.01); g.gain.exponentialRampToValueAtTime(0.0006,t+1.6);
+        o.start(t); o.stop(t+1.7);
+      }catch(e){} parts.timers.push(setTimeout(pluck, 2400+Math.random()*3400)); }
+      parts.timers.push(setTimeout(pluck, 1600));
+      // gentle warmth bed
+      var nb=actx.createBufferSource(); nb.buffer=_brownBuf(); nb.loop=true; var lpb=actx.createBiquadFilter(); lpb.type="lowpass"; lpb.frequency.value=220; var gb=actx.createGain(); gb.gain.value=0.07; nb.connect(lpb); lpb.connect(gb); gb.connect(master); nb.start(); parts.srcs.push(nb); target=0.5;
     }
     master.gain.linearRampToValueAtTime(target, actx.currentTime+2.5);
     soundNodes=parts;
@@ -2714,10 +2735,46 @@ function stopAmbient(){ stopSound(); currentSound="off"; updateMusicUI(); }
 function selectSound(type){ startSound(type); }
 function updateMusicUI(){ var s=$("soundSelect"); if(s && s.value!==currentSound) s.value=currentSound; }
 var decompBg="forest";
+var DECOMP_PHOTOS={
+  forest:["1441974231531-c6227db76b6e","1448375240586-882707db888b","1511497584788-876760111969","1502082553048-f009c37129b9"],
+  ocean:["1507525428034-b723cf961d3e","1505142468610-359e7d316be0","1439066615861-d1af74d74000"],
+  sunset:["1495616811223-4d98c6e9c869","1470252649378-9c29740c9fa8","1500534623283-312aade485b7"],
+  night:["1419242902214-272b3f66ee7a","1444703686981-a3abbc4d4fe3","1532978379173-523e16f371f9"],
+  lavender:["1499002238440-d264edd596ec","1498604636225-7e0c4c4f7c5a"]
+};
+function _photoUrl(id){ return "https://images.unsplash.com/photo-"+id+"?w=1600&q=72&auto=format&fit=crop"; }
+var slideTimer=null, slideUrls=[], slideTop=0, slideIdx=0, slideBg=null;
+function stopSlideshow(){ if(slideTimer){ clearInterval(slideTimer); slideTimer=null; } }
+function startSlideshow(bg){
+  if(slideBg===bg && slideTimer) return;   // already running this scene
+  stopSlideshow(); slideBg=bg;
+  var cont=document.getElementById("decompPhotos"); if(!cont) return;
+  cont.innerHTML="<img class='dphoto' id='dph0' alt=''><img class='dphoto' id='dph1' alt=''><div class='decomp-scrim'></div>";
+  var ids=DECOMP_PHOTOS[bg]||DECOMP_PHOTOS.forest, pending=ids.length;
+  var d=document.querySelector("#decompressView .decomp"); if(d) d.classList.remove("has-photo");
+  slideUrls=[];
+  ids.forEach(function(id){ var u=_photoUrl(id), im=new Image(); im.onload=function(){ slideUrls.push(u); done(); }; im.onerror=done; im.src=u; });
+  function done(){ pending--; if(pending<=0) run(); }
+  function run(){
+    if(!slideUrls.length) return;                 // all failed → themed gradient stays
+    if(d) d.classList.add("has-photo");
+    slideIdx=0; slideTop=0;
+    var a=document.getElementById("dph0"), b=document.getElementById("dph1"); if(!a||!b) return;
+    a.src=slideUrls[0]; a.classList.add("show");
+    if(slideUrls.length<2) return;
+    slideTimer=setInterval(function(){
+      var els=[document.getElementById("dph0"),document.getElementById("dph1")]; if(!els[0]||!els[1]){ stopSlideshow(); return; }
+      slideIdx=(slideIdx+1)%slideUrls.length;
+      var hidden=1-slideTop;
+      els[hidden].src=slideUrls[slideIdx]; els[hidden].classList.add("show"); els[slideTop].classList.remove("show");
+      slideTop=hidden;
+    }, 9000);
+  }
+}
 function setDecompBg(bg){
   decompBg=bg;
-  var d=document.querySelector("#decompressView .decomp"); if(!d) return;
-  d.className="decomp bg-"+bg;
+  var d=document.querySelector("#decompressView .decomp"); if(d) d.className="decomp bg-"+bg;
+  slideBg=null; startSlideshow(bg);
 }
 window.selectSound=selectSound; window.setDecompBg=setDecompBg;
 // sweet rising chime when the minute ends
@@ -2973,8 +3030,8 @@ function startSimulation(){
       r.status="returned";
       var reason=rand(["add a suspect description","clarify the narrative","missing property/evidence details","correct the location","add the victim statement","attach the call disposition"]);
       r.history.push({t:now(),s:"↩ Returned by "+supName+" — "+reason});
-      logEvent("↩ "+supName+" returned report "+r.num+" — "+reason,"backup");
-      toast("↩ Report Returned",r.num+" — "+supName+" asks you to "+reason+".","backup");
+      logEvent("↩ "+supName+" returned report "+r.num+" to the filing officer — "+reason,"backup");
+      // No operator toast — dispatchers/call-takers don't write these reports; it just shows in Records.
     }
     updateRecordsBadge();
     if($("recordsView") && $("recordsView").classList.contains("active")) renderReports();

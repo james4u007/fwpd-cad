@@ -542,6 +542,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           <button id="locateBtn" title="Locate me — precise GPS"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><line x1="12" y1="1.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22.5" y2="12"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button>
           <button id="recenterBtn" title="Recenter on me">◎</button>
           <button id="setLocBtn" title="Set my location by address">📍</button>
+          <button id="jdToggleBtn" title="Toggle divisions map overlay">🗺️</button>
           <button id="callsToggleBtn" title="Toggle call pins">📞</button>
         </div>
         <div class="map-overlay ovl-card" id="routeBar" style="top:14px;left:50%;transform:translateX(-50%);padding:7px;display:flex;gap:6px;align-items:center;z-index:600">
@@ -963,11 +964,9 @@ function startLiveLocation(){
 }
 function stopLiveLocation(){ if(geoWatchId!=null && navigator.geolocation){ navigator.geolocation.clearWatch(geoWatchId); } geoWatchId=null; }
 function recenterJurisdiction(lat,lng){
-  TOWN.lat=lat; TOWN.lng=lng; TOWN.real=true;
-  BEAT_POS=computeBeats();
-  units.forEach(function(u){ if(u.ai && u.beat && BEAT_POS[u.beat]){ u.lat=BEAT_POS[u.beat].lat; u.lng=BEAT_POS[u.beat].lng; refreshUnitMarker(u); } });
-  if(map){ drawJurisdiction(); map.setView([lat+JD_OFFLAT*0.5, lng], map.getZoom()); }
-  refreshUnitMarker(self()); updateEnrouteLines(); renderDuty();
+  // Divisions are now the real, geographically-fixed FWPD map — we no longer move them.
+  // Just keep your own marker/lines fresh as you travel.
+  refreshUnitMarker(self()); updateEnrouteLines();
 }
 
 // ============================================================
@@ -1035,7 +1034,7 @@ function seedCalls(){
 //  MAP
 // ============================================================
 function initMap(){
-  map = L.map("map",{ zoomControl:true, attributionControl:true }).setView([TOWN.lat+JD_OFFLAT*0.5, TOWN.lng], TOWN.zoom);
+  map = L.map("map",{ zoomControl:true, attributionControl:true }).setView([32.802, -97.314], 11);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{
     attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:"abcd", maxZoom:19
   }).addTo(map);
@@ -1047,10 +1046,14 @@ function initMap(){
   setTimeout(function(){ map.invalidateSize(); }, 150);
 }
 function divisionOf(lat,lng){
-  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
-  var x=(lng-cx)/JD_SX, y=(lat-cy)/JD_SY;
-  for(var i=0;i<DIVISIONS.length;i++){ var D=DIVISIONS[i]; if(x>=D.x0&&x<=D.x1&&y>=D.y0&&y<=D.y1) return D.name; }
-  return null;
+  // inside a division's box? else nearest division center
+  var best=null, bestD=1e9;
+  for(var i=0;i<DIVISIONS.length;i++){ var D=DIVISIONS[i];
+    if(lat>=D.clat-D.dlat&&lat<=D.clat+D.dlat&&lng>=D.clng-D.dlng&&lng<=D.clng+D.dlng) return D.name;
+    var dd=(lat-D.clat)*(lat-D.clat)+(lng-D.clng)*(lng-D.clng);
+    if(dd<bestD){ bestD=dd; best=D.name; }
+  }
+  return best;
 }
 function unitIcon(u){
   var s=STATUS[u.status];
@@ -1179,6 +1182,7 @@ function applyNewCenter(lat,lng){
   renderDuty(); renderRoster();
 }
 if($("setLocBtn")) $("setLocBtn").onclick=openLocationModal;
+if($("jdToggleBtn")) $("jdToggleBtn").onclick=toggleJdOverlay;
 
 // Collapsible Units-On-Duty panel (so it doesn't cover the map)
 function setDutyCollapsed(collapsed){
@@ -1308,58 +1312,55 @@ var enrouteLines=[];
 var JD_OFFLAT=0.030; // shift the grid north so YOUR location sits in South division
 // Full FWPD division + beat set, arranged compass-style around the map center (x=east, y=north)
 var DIV_STYLE={ "South":{c:"#86efac"},"Central":{c:"#5aa9ff"},"North":{c:"#ff6b6b"},"Northwest":{c:"#c79bff"},"East":{c:"#f0a93b"},"West":{c:"#efe0a0"} };
+// Real FWPD patrol divisions — geographic centers + spreads (deg). Beats placed within each.
 var DIVISIONS=[
-  {name:"Central",   c:"#5aa9ff", cols:6, x0:-1.02, y0:-0.51, x1:1.02,  y1:0.51,  beats:["A11","A12","A13","A14","A15","A16","A17","A18","A19","B11","B12","B13","B14","B15","B16","B17","B18","B19"]},
-  {name:"North",     c:"#ff6b6b", cols:7, x0:-1.19, y0:0.51,  x1:1.19,  y1:1.19,  beats:["F11","F12","F13","F14","F15","F16","E11","E12","E13","E14","E15","E16","E17","E18"]},
-  {name:"Northwest", c:"#c79bff", cols:7, x0:-3.57, y0:0.51,  x1:-1.19, y1:1.19,  beats:["C11","C12","C13","C14","C15","C16","C17","D11","D12","D13","D14","D15","D16","D17"]},
-  {name:"East",      c:"#f0a93b", cols:6, x0:1.02,  y0:-0.51, x1:3.06,  y1:0.51,  beats:["G11","G12","G13","G14","G15","G16","G17","G18","G19","H11","H12","H13","H14","H15","H16","H17","H18","H19"]},
-  {name:"West",      c:"#efe0a0", cols:5, x0:-2.72, y0:-0.85, x1:-1.02, y1:0.51,  beats:["K11","K12","K13","K14","K15","K16","K17","K18","K19","L11","L12","L13","L14","L15","L16","L17","L18","L19","L21"]},
-  {name:"South",     c:"#86efac", cols:5, x0:-0.85, y0:-2.00, x1:0.85,  y1:-0.51, beats:["I11","I12","I13","I14","I15","I16","I17","I18","I19","J11","J12","J13","J14","J15","J16","J17","J18","J19","J21"]}
+  {name:"Central",   c:"#5aa9ff", cols:6, clat:32.752, clng:-97.330, dlat:0.028, dlng:0.030, beats:["A11","A12","A13","A14","A15","A16","A17","A18","A19","B11","B12","B13","B14","B15","B16","B17","B18","B19"]},
+  {name:"North",     c:"#ff6b6b", cols:7, clat:32.928, clng:-97.300, dlat:0.075, dlng:0.080, beats:["F11","F12","F13","F14","F15","F16","E11","E12","E13","E14","E15","E16","E17","E18"]},
+  {name:"Northwest", c:"#c79bff", cols:7, clat:32.835, clng:-97.420, dlat:0.072, dlng:0.075, beats:["C11","C12","C13","C14","C15","C16","C17","D11","D12","D13","D14","D15","D16","D17"]},
+  {name:"East",      c:"#f0a93b", cols:6, clat:32.785, clng:-97.190, dlat:0.055, dlng:0.100, beats:["G11","G12","G13","G14","G15","G16","G17","G18","G19","H11","H12","H13","H14","H15","H16","H17","H18","H19"]},
+  {name:"West",      c:"#efe0a0", cols:5, clat:32.730, clng:-97.450, dlat:0.065, dlng:0.085, beats:["K11","K12","K13","K14","K15","K16","K17","K18","K19","L11","L12","L13","L14","L15","L16","L17","L18","L19","L21"]},
+  {name:"South",     c:"#86efac", cols:5, clat:32.660, clng:-97.345, dlat:0.075, dlng:0.090, beats:["I11","I12","I13","I14","I15","I16","I17","I18","I19","J11","J12","J13","J14","J15","J16","J17","J18","J19","J21"]}
 ];
+// Georeferenced official FWPD patrol-divisions map overlay (bounds from scale-bar + downtown anchor)
+var JD_IMG="fwpd-divisions.png";
+var JD_IMG_BOUNDS=[[32.5186,-97.6063],[33.0847,-97.0215]];
+var jdOverlay=null, jdOverlayOn=true;
 var PHON={A:"Adam",B:"Boy",C:"Charlie",D:"David",E:"Edward",F:"Frank",G:"George",H:"Henry",I:"Ida",J:"John",K:"King",L:"Lincoln"};
 function beatToCallsign(b){ return (PHON[b.charAt(0)]||b.charAt(0))+"-"+b.replace(/^[A-Z]/,""); }
 var BEAT_POS={};
 function computeBeats(){
-  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT, out={};
+  var out={};
   DIVISIONS.forEach(function(D){
-    var n=D.beats.length, cols=D.cols, rows=Math.ceil(n/cols), cwx=(D.x1-D.x0)/cols, chy=(D.y1-D.y0)/rows;
+    var n=D.beats.length, cols=D.cols, rows=Math.ceil(n/cols);
+    var w=D.clng-D.dlng, e=D.clng+D.dlng, s=D.clat-D.dlat, no=D.clat+D.dlat;
+    var cwx=(e-w)/cols, chy=(no-s)/rows;
     for(var i=0;i<n;i++){
       var col=i%cols, row=Math.floor(i/cols);
-      var x0=D.x0+col*cwx, x1=x0+cwx, yTop=D.y1-row*chy, yBot=yTop-chy;
-      out[D.beats[i]]={ lat:cy+((yTop+yBot)/2)*JD_SY, lng:cx+((x0+x1)/2)*JD_SX, div:D.name, divBox:D };
+      var lng=w+(col+0.5)*cwx, lat=no-(row+0.5)*chy;
+      out[D.beats[i]]={ lat:lat, lng:lng, div:D.name, divBox:D };
     }
   });
   return out;
 }
 function randInJurisdiction(){
-  var D=rand(DIVISIONS), cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
-  return { lat: cy+randf(D.y0,D.y1)*JD_SY, lng: cx+randf(D.x0,D.x1)*JD_SX };
+  var D=rand(DIVISIONS);
+  return { lat: D.clat+randf(-D.dlat,D.dlat), lng: D.clng+randf(-D.dlng,D.dlng) };
 }
 function clearJd(){ jdLayers.forEach(function(l){ if(map) map.removeLayer(l); }); jdLayers=[]; }
-var JD_SX=0.018, JD_SY=0.016; // degrees per layout-unit (lng, lat)
+// Draw the official FWPD patrol-divisions map as a georeferenced overlay (replaces hand-drawn shapes)
 function drawJurisdiction(){
   if(!map) return;
-  clearJd();
-  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
-  DIVISIONS.forEach(function(D){
-    var ours=(D.name==="South"), n=D.beats.length, cols=D.cols, rows=Math.ceil(n/cols);
-    var cwx=(D.x1-D.x0)/cols, chy=(D.y1-D.y0)/rows;
-    for(var i=0;i<n;i++){
-      var col=i%cols, row=Math.floor(i/cols);
-      var x0=D.x0+col*cwx, x1=x0+cwx, yTop=D.y1-row*chy, yBot=yTop-chy;
-      var west=cx+x0*JD_SX, east=cx+x1*JD_SX, north=cy+yTop*JD_SY, south=cy+yBot*JD_SY;
-      var rect=L.rectangle([[south,west],[north,east]],{ color:"#14171b", weight:1, opacity:0.7, fillColor:D.c, fillOpacity:ours?0.55:0.42, interactive:false });
-      rect.addTo(map); jdLayers.push(rect);
-      var clat=(north+south)/2, clng=(west+east)/2;
-      var bl=L.marker([clat,clng],{ interactive:false, icon:L.divIcon({className:"", html:"<div style='font-size:9px;color:#0f1318;font-weight:800;font-family:monospace;text-shadow:0 1px 1px rgba(255,255,255,.6)'>"+D.beats[i]+"</div>", iconSize:[26,12], iconAnchor:[13,6]}) });
-      bl.addTo(map); jdLayers.push(bl);
-    }
-    var nlat=cy+(D.y1*JD_SY)+0.004, nlng=cx+(((D.x0+D.x1)/2)*JD_SX);
-    var html="<div style='font-size:"+(ours?13:11)+"px;font-weight:800;letter-spacing:.5px;color:#0e1116;background:"+D.c+";padding:1px 7px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.6);white-space:nowrap;opacity:.96'>"+D.name.toUpperCase()+(ours?" ★":"")+"</div>";
-    var m=L.marker([nlat,nlng],{ interactive:false, icon:L.divIcon({className:"", html:html, iconSize:[120,18], iconAnchor:[60,9]}) });
-    m.addTo(map); jdLayers.push(m);
-  });
+  if(jdOverlay){ map.removeLayer(jdOverlay); jdOverlay=null; }
+  if(jdOverlayOn){
+    jdOverlay=L.imageOverlay(JD_IMG, JD_IMG_BOUNDS, { opacity:0.72, interactive:false, zIndex:250 });
+    jdOverlay.addTo(map);
+  }
   renderJdLegend();
+}
+function toggleJdOverlay(){
+  jdOverlayOn=!jdOverlayOn;
+  drawJurisdiction();
+  var b=$("jdToggleBtn"); if(b) b.style.opacity=jdOverlayOn?"1":"0.45";
 }
 function renderJdLegend(){
   var box=$("jdRows"); if(!box) return; box.innerHTML="";
@@ -2032,8 +2033,7 @@ function moveUnit(u){
   if(u.status==="onscene"||u.status==="unavailable"||u.status==="break") return; // parked
   // Patrol: small wander, clamped inside the unit's own division box
   var b=u.divBox; if(!b){ refreshUnitMarker(u); return; }
-  var cx=TOWN.lng, cy=TOWN.lat+JD_OFFLAT;
-  var w=cx+b.x0*JD_SX, e=cx+b.x1*JD_SX, s=cy+b.y0*JD_SY, n=cy+b.y1*JD_SY;
+  var w=b.clng-b.dlng, e=b.clng+b.dlng, s=b.clat-b.dlat, n=b.clat+b.dlat;
   u.lat += randf(-0.0005,0.0005); u.lng += randf(-0.0005,0.0005);
   u.lat = Math.max(s, Math.min(n, u.lat));
   u.lng = Math.max(w, Math.min(e, u.lng));

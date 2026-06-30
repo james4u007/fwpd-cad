@@ -486,6 +486,34 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 .decomp-tip{color:#c9efd6;font-size:15px;min-height:22px;font-weight:600}
 .decomp-note{color:#84ad97;font-size:13px;margin-top:6px}
 :root[data-theme="light"] .decomp-tip{color:#1f6b46} :root[data-theme="light"] .decomp-note{color:#5d8070}
+.decomp-head-r{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex:none}
+.decomp-timer{font-size:36px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px;line-height:1;background:linear-gradient(180deg,#bdebcf,#5fd39a 60%,#34b07e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 2px 18px rgba(80,210,150,.22)}
+:root[data-theme="light"] .decomp-timer{background:linear-gradient(180deg,#2f9c6c,#1f7a52);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.music-menu{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:340px}
+.music-menu .mbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:#dff5ea;border-radius:18px;padding:6px 11px;font-size:12px;cursor:pointer;transition:all .12s}
+.music-menu .mbtn:hover{background:rgba(255,255,255,.14)}
+.music-menu .mbtn.on{background:rgba(95,211,154,.22);border-color:#5fd39a;color:#eafff4}
+:root[data-theme="light"] .music-menu .mbtn{background:rgba(24,68,48,.05);border-color:rgba(24,68,48,.16);color:#1d5a3e}
+:root[data-theme="light"] .music-menu .mbtn.on{background:rgba(40,150,100,.16);border-color:#2a8160;color:#15452f}
+.break-room{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:11px;margin:10px 0 2px}
+.br-label{font-weight:800;color:#c9efd6;font-size:13px}
+.br-stat{font-size:12.5px;color:#84ad97}.br-stat b{color:#e6f7ec}
+:root[data-theme="light"] .br-label{color:#1f6b46} :root[data-theme="light"] .br-stat{color:#5d8070} :root[data-theme="light"] .br-stat b{color:#163c2a}
+.br-bar{width:90px;height:7px;border-radius:5px;background:rgba(255,255,255,.13);overflow:hidden}
+.br-bar>div{height:100%;width:0;background:linear-gradient(90deg,#43b184,#7fe9c0);transition:width .4s}
+.perf-play{background:rgba(95,211,154,.16);border:1px solid rgba(95,211,154,.4);color:#eafff4;border-radius:9px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+.perf-play:hover:not(:disabled){background:rgba(95,211,154,.28)}
+.perf-play:disabled{cursor:not-allowed}
+:root[data-theme="light"] .perf-play{color:#15452f}
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:360px;margin:0 auto}
+.mem-card{aspect-ratio:1/1;border-radius:12px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer;user-select:none;transition:transform .15s,background .15s}
+.mem-card:hover{border-color:var(--accent)}
+.mem-card.flip{background:rgba(61,169,252,.12);border-color:var(--accent)}
+.mem-card.done{background:rgba(46,204,113,.16);border-color:#2ecc71;cursor:default}
+.ttt-grid{display:grid;grid-template-columns:repeat(3,84px);grid-auto-rows:84px;gap:8px;justify-content:center}
+.ttt-cell{border-radius:12px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:38px;cursor:pointer}
+.ttt-cell:hover{border-color:var(--accent)}
+.ttt-cell.filled{cursor:default}
 </style>
 </head>
 <body>
@@ -835,8 +863,14 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           <div class="decomp-head">
             <div><h2>🌲 Decompress</h2><p>A quiet minute in the woods, between calls. Breathe with the circle — it leaves the second a call needs you.</p></div>
             <div class="decomp-head-r">
-              <span class="decomp-left" id="decompLeft">1:00 left</span>
-              <button class="decomp-sound" onclick="toggleAmbient()" id="decompSound">🌲 Forest Off</button>
+              <div class="decomp-timer" id="decompTimer">1:00</div>
+              <div class="music-menu" id="musicMenu">
+                <button class="mbtn" data-snd="forest" onclick="selectSound('forest')">🌲 Forest</button>
+                <button class="mbtn" data-snd="rain" onclick="selectSound('rain')">🌧️ Rain</button>
+                <button class="mbtn" data-snd="ocean" onclick="selectSound('ocean')">🌊 Ocean</button>
+                <button class="mbtn" data-snd="lofi" onclick="selectSound('lofi')">🎵 Lo-Fi</button>
+                <button class="mbtn on" data-snd="off" onclick="selectSound('off')">🔇 Off</button>
+              </div>
             </div>
           </div>
           <div class="breath-wrap" id="breathWrap"><div class="breath-rings"><div class="breath-circle"><span id="breathLabel">Breathe in…</span></div></div></div>
@@ -845,7 +879,18 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
             <h3>Take a breather after each call</h3>
             <p>Decompress opens for <b>one minute</b> each time a call is cleared and its report is filed.<br>Clear a call, then step back into the woods.</p>
           </div>
-          <div class="decomp-foot"><div class="decomp-tip" id="decompTip"></div><div class="decomp-note">Box breathing · in 4 · hold 4 · out 4 · hold 4. You've got this.</div></div>
+          <div class="decomp-foot">
+            <div class="decomp-tip" id="decompTip"></div>
+            <div class="break-room">
+              <span class="br-label">🎮 Break Room</span>
+              <span class="br-stat">Clean calls <b id="perfStreak">0 / 3</b></span>
+              <div class="br-bar"><div id="perfBar"></div></div>
+              <span class="br-stat">Tokens <b id="perfTokens">0</b></span>
+              <button class="perf-play" onclick="playGame('memory')">🧠 Memory</button>
+              <button class="perf-play" onclick="playGame('ttt')">⭕ Tic-Tac-Toe</button>
+            </div>
+            <div class="decomp-note">Box breathing · in 4 · hold 4 · out 4 · hold 4. Handle calls cleanly to earn game tokens.</div>
+          </div>
         </div>
       </div>
       <!-- MORE / GUIDES VIEW (everything behind the "More" wall renders here) -->
@@ -2400,7 +2445,7 @@ function renderDispatch(){
       "<div class='meta'>📍 "+esc(c.street)+" · "+esc(c.code)+" · "+esc(c.status.toUpperCase())+"<br>Units: "+esc(aCs)+"</div>"+
       "<div class='ctrls' onclick='event.stopPropagation()'>"+
         "<button onclick=\"dspSetPrio('"+c.id+"',1)\">⬆ P1</button><button onclick=\"dspSetPrio('"+c.id+"',2)\">P2</button><button onclick=\"dspSetPrio('"+c.id+"',3)\">⬇ P3</button>"+
-        "<button onclick=\"dspAssignN('"+c.id+"')\">🚓 Dispatch</button><button onclick=\"clearCall('"+c.id+"');renderDispatch();\">✓ Clear</button>"+
+        "<button onclick=\"dspAssignN('"+c.id+"')\">🚓 Dispatch</button><button onclick=\"dspClearCall('"+c.id+"')\">✓ Clear</button>"+
       "</div>"+
       "<div class='assign-box' onclick='event.stopPropagation()'>Send <select id='cnt_"+c.id+"'><option>1</option><option>2</option><option>3</option><option>4</option></select> nearest unit(s)</div>"+
     "</div>";
@@ -2425,7 +2470,7 @@ function dspAssignCount(id,n){
   var avail=units.filter(function(u){return u.status==="available" && c.assigned.indexOf(u.id)<0;});
   avail.sort(function(a,b){return dist(a,c)-dist(b,c);});
   var k=0; for(var i=0;i<avail.length && k<n;i++){ var u=avail[i]; assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" dispatched (en route)."}); refreshUnitMarker(u); k++; }
-  if(k>0){ logEvent("Dispatch sent "+k+" unit(s) to #"+c.num+" "+c.type,"call"); toast("🚓 Units Dispatched",k+" unit(s) en route to #"+c.num+" "+c.type+".",""); }
+  if(k>0){ logEvent("Dispatch sent "+k+" unit(s) to #"+c.num+" "+c.type,"call"); toast("🚓 Units Dispatched",k+" unit(s) en route to #"+c.num+" "+c.type+".",""); creditCorrectCall(c.id); }
   else toast("No Units Available","No available units to dispatch right now.","backup");
   refreshCallMarker(c); renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge();
 }
@@ -2434,14 +2479,20 @@ function dspUnitClick(id){
   if(dspSelCall){ var c=callById(dspSelCall);
     if(c){ if(u.status!=="available"){ toast("Unit Busy",u.callsign+" is "+STATUS[u.status].label+" — pick an available unit.","backup"); return; }
       assignUnitToCall(u,c,true); u.status="enroute"; c.narrative.push({t:now(),s:u.callsign+" assigned by dispatch (en route)."});
-      logEvent("Dispatch assigned "+u.callsign+" → #"+c.num+" "+c.type,"call"); toast("🚓 Assigned",u.callsign+" en route to #"+c.num+".","");
+      logEvent("Dispatch assigned "+u.callsign+" → #"+c.num+" "+c.type,"call"); toast("🚓 Assigned",u.callsign+" en route to #"+c.num+".",""); creditCorrectCall(c.id);
       refreshCallMarker(c); refreshUnitMarker(u); dspSelCall=null; renderDispatch(); renderDuty(); if($("callsView").classList.contains("active"))renderCalls(); updateCallsBadge(); return; }
   }
   switchView("map");
   if(map){ map.setView([u.lat,u.lng], 16); var mk=unitMarkers[u.id]; if(mk&&mk.openPopup){ try{mk.openPopup();}catch(e){} } }
 }
+// Clearing a call with NO units sent = rushing/dismissing it = you're fired
+function dspClearCall(id){
+  var c=callById(id); if(!c)return;
+  if(c.assigned.length===0){ getFired("You cleared call #"+c.num+" ("+c.type+") without sending a single unit."); return; }
+  clearCall(id); renderDispatch();
+}
 function dspNewCall(){ var c=makeCall(); calls.push(c); addCallMarker(c); logEvent("Dispatch created call #"+c.num+" "+c.type,"call"); renderDispatch(); updateCallsBadge(); if($("callsView").classList.contains("active"))renderCalls(); }
-window.dspSelectCall=dspSelectCall; window.dspSetPrio=dspSetPrio; window.dspAssignN=dspAssignN; window.dspUnitClick=dspUnitClick; window.dspNewCall=dspNewCall;
+window.dspSelectCall=dspSelectCall; window.dspSetPrio=dspSetPrio; window.dspAssignN=dspAssignN; window.dspUnitClick=dspUnitClick; window.dspNewCall=dspNewCall; window.dspClearCall=dspClearCall;
 
 // ============================================================
 //  911 CALL TAKER (intake) — realistic call-entry screen
@@ -2491,6 +2542,8 @@ function intakeSubmit(){
   var prio=parseInt(($("ik-prio")&&$("ik-prio").value)||"3",10);
   var addr=(($("ik-loc")&&$("ik-loc").value)||"").trim();
   var apt=(($("ik-apt")&&$("ik-apt").value)||"").trim();
+  var cross=(($("ik-cross")&&$("ik-cross").value)||"").trim();
+  if(!addr && !cross){ getFired("You sent a 911 incident to Dispatch with NO location — units had nowhere to go."); return; }  // rushing = fired
   var p=randInJurisdiction();
   var c={ id:uid(), num:nextCallNum++, type:typeVal, code:code, prio:prio,
           lat:p.lat, lng:p.lng, street:(addr?(addr+(apt?(" #"+apt):"")):rand(FALLBACK_STREETS)),
@@ -2511,6 +2564,7 @@ function intakeSubmit(){
   logEvent("📞 911 entered by "+(session.name||"CT")+" — #"+c.num+" "+c.type+" (P"+prio+")","call");
   toast("📨 Incident Created","#"+c.num+" "+c.type+" sent to Dispatch.","");
   updateCallsBadge(); if($("callsView").classList.contains("active"))renderCalls(); dispatchLiveRefresh();
+  creditCorrectCall(c.id);   // a complete, located 911 call handled cleanly
   intakeClear(); renderIntake();
 }
 window.intakeSyncPrio=intakeSyncPrio; window.intakeClear=intakeClear; window.intakeSubmit=intakeSubmit;
@@ -2534,23 +2588,24 @@ function updateBreath(){
 function setDecompLocked(locked){
   if($("breathWrap")) $("breathWrap").style.display=locked?"none":"flex";
   if($("decompLock")) $("decompLock").style.display=locked?"flex":"none";
-  if($("decompLeft")) $("decompLeft").style.display=locked?"none":"";
+  if($("decompTimer")) $("decompTimer").style.display=locked?"none":"";
   if($("decompTip")) $("decompTip").style.display=locked?"none":"";
 }
 function renderDecompress(){
+  updatePerfUI();
   if(decompTimer){ clearInterval(decompTimer); decompTimer=null; }
   if(decompCredit<=0){ setDecompLocked(true); stopAmbient(); return; }
   setDecompLocked(false);
-  if($("decompLeft")) $("decompLeft").textContent=fmtSecs(decompCredit)+" left";
+  if($("decompTimer")) $("decompTimer").textContent=fmtSecs(decompCredit);
   var c=document.querySelector("#decompressView .breath-circle");
   if(c){ c.style.animation="none"; void c.offsetWidth; c.style.animation=""; }   // restart cycle on entry
   decompPhase=0; decompTick=0; updateBreath();
   decompTimer=setInterval(function(){
     decompCredit--; decompTick++;
-    if($("decompLeft")) $("decompLeft").textContent=fmtSecs(decompCredit)+" left";
+    if($("decompTimer")) $("decompTimer").textContent=fmtSecs(decompCredit);
     if(decompTick%4===0){ decompPhase=(decompPhase+1)%4; updateBreath(); }
     if(decompCredit<=0){
-      clearInterval(decompTimer); decompTimer=null; stopAmbient(); setDecompLocked(true);
+      clearInterval(decompTimer); decompTimer=null; decompChime(); stopAmbient(); setDecompLocked(true);
       var lk=document.querySelector("#decompLock h3"); if(lk) lk.textContent="That's your minute — nicely done.";
       toast("🌲 Break's over","Back to it. You earn another minute when the next call clears.","");
     }
@@ -2558,64 +2613,133 @@ function renderDecompress(){
 }
 function stopDecompress(){ if(decompTimer){ clearInterval(decompTimer); decompTimer=null; } stopAmbient(); }
 
-// Forest soundscape via WebAudio — wind/leaves (filtered brown noise) + occasional birdsong. Self-contained, opt-in.
-var ambientNodes=null;
-function startAmbient(){
+// ---- Music: selectable synthesized soundscapes (Forest / Rain / Ocean / Lo-Fi) ----
+var soundNodes=null, currentSound="off";
+function _brownBuf(){ var len=Math.floor(actx.sampleRate*4),b=actx.createBuffer(1,len,actx.sampleRate),d=b.getChannelData(0),last=0; for(var i=0;i<len;i++){var w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.2;} return b; }
+function _whiteBuf(){ var len=Math.floor(actx.sampleRate*2),b=actx.createBuffer(1,len,actx.sampleRate),d=b.getChannelData(0); for(var i=0;i<len;i++) d[i]=Math.random()*2-1; return b; }
+function startSound(type){
+  stopSound(); currentSound=type;
+  if(type==="off"){ updateMusicUI(); return; }
   try{
     if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); }
     if(actx.state==="suspended") actx.resume();
     var master=actx.createGain(); master.gain.value=0.0001; master.connect(actx.destination);
-    // brown-noise wind / rustling leaves
-    var len=Math.floor(actx.sampleRate*4), buf=actx.createBuffer(1,len,actx.sampleRate), d=buf.getChannelData(0), last=0;
-    for(var i=0;i<len;i++){ var wn=Math.random()*2-1; last=(last+0.02*wn)/1.02; d[i]=last*3.2; }
-    var noise=actx.createBufferSource(); noise.buffer=buf; noise.loop=true;
-    var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=640; lp.Q.value=0.5;
-    var ng=actx.createGain(); ng.gain.value=0.55;
-    noise.connect(lp); lp.connect(ng); ng.connect(master);
-    var lfo=actx.createOscillator(); lfo.type="sine"; lfo.frequency.value=0.08; var lg=actx.createGain(); lg.gain.value=300; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
-    noise.start();
-    master.gain.linearRampToValueAtTime(0.5, actx.currentTime+3);
-    // birdsong scheduler
-    var alive=true, birdTimer=null;
-    function chirp(){
-      if(!alive) return;
-      try{
-        var t=actx.currentTime, base=1700+Math.random()*1900, notes=2+Math.floor(Math.random()*3);
-        var o=actx.createOscillator(); o.type="sine"; var g=actx.createGain(); g.gain.value=0;
-        var bp=actx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=base; bp.Q.value=6;
-        o.connect(g); g.connect(bp); bp.connect(master);
-        for(var k=0;k<notes;k++){ var st=t+k*0.10;
-          o.frequency.setValueAtTime(base*(1+0.1*Math.random()), st);
-          o.frequency.linearRampToValueAtTime(base*(1.25+0.35*Math.random()), st+0.05);
-          g.gain.setValueAtTime(0, st);
-          g.gain.linearRampToValueAtTime(0.05, st+0.012);
-          g.gain.linearRampToValueAtTime(0.0001, st+0.085);
-        }
-        o.start(t); o.stop(t+notes*0.10+0.12);
-      }catch(e){}
-      birdTimer=setTimeout(chirp, 2600+Math.random()*6500);
+    var parts={ srcs:[], oscs:[], timers:[], master:master, stop:function(){} }, target=0.45;
+    if(type==="forest"){
+      var n=actx.createBufferSource(); n.buffer=_brownBuf(); n.loop=true;
+      var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=640; var ng=actx.createGain(); ng.gain.value=0.5;
+      n.connect(lp); lp.connect(ng); ng.connect(master);
+      var lfo=actx.createOscillator(); lfo.frequency.value=0.08; var lg=actx.createGain(); lg.gain.value=300; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+      n.start(); parts.srcs.push(n); parts.oscs.push(lfo);
+      var alive={v:true};
+      function chirp(){ if(!alive.v)return; try{ var t=actx.currentTime, base=1700+Math.random()*1900, notes=2+Math.floor(Math.random()*3); var o=actx.createOscillator(); o.type="sine"; var g=actx.createGain(); g.gain.value=0; var bp=actx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=base; bp.Q.value=6; o.connect(g); g.connect(bp); bp.connect(master); for(var k=0;k<notes;k++){var st=t+k*0.1; o.frequency.setValueAtTime(base*(1+0.1*Math.random()),st); o.frequency.linearRampToValueAtTime(base*(1.25+0.35*Math.random()),st+0.05); g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(0.05,st+0.012); g.gain.linearRampToValueAtTime(0.0001,st+0.085);} o.start(t); o.stop(t+notes*0.1+0.12);}catch(e){} parts.timers.push(setTimeout(chirp,2600+Math.random()*6500)); }
+      parts.timers.push(setTimeout(chirp,1500)); parts.stop=function(){ alive.v=false; }; target=0.5;
+    } else if(type==="rain"){
+      var n=actx.createBufferSource(); n.buffer=_whiteBuf(); n.loop=true; var hp=actx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=700; var lp2=actx.createBiquadFilter(); lp2.type="lowpass"; lp2.frequency.value=7000; var ng=actx.createGain(); ng.gain.value=0.16; n.connect(hp); hp.connect(lp2); lp2.connect(ng); ng.connect(master);
+      var nb=actx.createBufferSource(); nb.buffer=_brownBuf(); nb.loop=true; var lpb=actx.createBiquadFilter(); lpb.type="lowpass"; lpb.frequency.value=420; var gb=actx.createGain(); gb.gain.value=0.4; nb.connect(lpb); lpb.connect(gb); gb.connect(master);
+      n.start(); nb.start(); parts.srcs.push(n,nb); target=0.45;
+    } else if(type==="ocean"){
+      var n=actx.createBufferSource(); n.buffer=_brownBuf(); n.loop=true; var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=500; var swell=actx.createGain(); swell.gain.value=0.22; n.connect(lp); lp.connect(swell); swell.connect(master);
+      var lfo=actx.createOscillator(); lfo.frequency.value=0.1; var lg=actx.createGain(); lg.gain.value=0.18; lfo.connect(lg); lg.connect(swell.gain); lfo.start();
+      var lfo2=actx.createOscillator(); lfo2.frequency.value=0.13; var lg2=actx.createGain(); lg2.gain.value=180; lfo2.connect(lg2); lg2.connect(lp.frequency); lfo2.start();
+      n.start(); parts.srcs.push(n); parts.oscs.push(lfo,lfo2); target=0.6;
+    } else if(type==="lofi"){
+      var chords=[[220,277.18,329.63],[196,246.94,293.66],[174.61,220,261.63],[246.94,311.13,369.99]];
+      var pad=actx.createGain(); pad.gain.value=0.0001; var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=900; pad.connect(lp); lp.connect(master);
+      var voices=[actx.createOscillator(),actx.createOscillator(),actx.createOscillator()];
+      voices.forEach(function(o){ o.type="triangle"; var g=actx.createGain(); g.gain.value=0.33; o.connect(g); g.connect(pad); o.start(); parts.oscs.push(o); });
+      var ci={v:0}; function setChord(){ var c=chords[ci.v%chords.length]; voices.forEach(function(o,i){ try{o.frequency.setTargetAtTime(c[i],actx.currentTime,1.2);}catch(e){} }); ci.v++; parts.timers.push(setTimeout(setChord,7000)); }
+      setChord(); pad.gain.linearRampToValueAtTime(0.5, actx.currentTime+3);
+      var nb=actx.createBufferSource(); nb.buffer=_brownBuf(); nb.loop=true; var lpb=actx.createBiquadFilter(); lpb.type="lowpass"; lpb.frequency.value=300; var gb=actx.createGain(); gb.gain.value=0.1; nb.connect(lpb); lpb.connect(gb); gb.connect(master); nb.start(); parts.srcs.push(nb); target=0.42;
     }
-    birdTimer=setTimeout(chirp, 1800);
-    ambientNodes={ noise:noise, lfo:lfo, master:master, stop:function(){ alive=false; if(birdTimer)clearTimeout(birdTimer); } };
+    master.gain.linearRampToValueAtTime(target, actx.currentTime+2.5);
+    soundNodes=parts;
   }catch(e){}
+  updateMusicUI();
 }
-function stopAmbient(){
-  if(ambientNodes && actx){
-    try{
-      if(ambientNodes.stop) ambientNodes.stop();
-      ambientNodes.master.gain.cancelScheduledValues(actx.currentTime);
-      ambientNodes.master.gain.linearRampToValueAtTime(0, actx.currentTime+1.0);
-      var n=ambientNodes; setTimeout(function(){ try{ n.noise.stop(); n.lfo.stop(); }catch(e){} }, 1100);
+function stopSound(){
+  if(soundNodes && actx){
+    try{ if(soundNodes.stop) soundNodes.stop(); soundNodes.timers.forEach(function(id){ clearTimeout(id); });
+      soundNodes.master.gain.cancelScheduledValues(actx.currentTime); soundNodes.master.gain.linearRampToValueAtTime(0, actx.currentTime+0.9);
+      var n=soundNodes; setTimeout(function(){ try{ n.srcs.forEach(function(s){s.stop();}); n.oscs.forEach(function(o){o.stop();}); }catch(e){} }, 1000);
     }catch(e){}
   }
-  ambientNodes=null;
-  var b=$("decompSound"); if(b) b.textContent="🌲 Forest Off";
+  soundNodes=null;
 }
-function toggleAmbient(){
-  if(ambientNodes){ stopAmbient(); }
-  else { startAmbient(); var b=$("decompSound"); if(b) b.textContent="🌳 Forest On"; }
+function stopAmbient(){ stopSound(); currentSound="off"; updateMusicUI(); }
+function selectSound(type){ if(currentSound===type) startSound("off"); else startSound(type); }
+function updateMusicUI(){ document.querySelectorAll("#musicMenu .mbtn").forEach(function(b){ b.classList.toggle("on", b.dataset.snd===currentSound); }); }
+window.selectSound=selectSound;
+// sweet rising chime when the minute ends
+function decompChime(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); [[659,0],[880,0.13],[1319,0.27]].forEach(function(s){ var t=actx.currentTime+s[1]; var o=actx.createOscillator(); o.type="sine"; var g=actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value=s[0]; g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.0008,t+0.55); o.start(t); o.stop(t+0.6); }); }catch(e){} }
+
+// ============================================================
+//  REWARDS — clean calls earn game breaks; rushing gets you fired
+// ============================================================
+var perfCorrect=0, gameTokens=0, perfHandled={};
+function updatePerfUI(){
+  var s=$("perfStreak"); if(s) s.textContent=perfCorrect+" / 3";
+  var tk=$("perfTokens"); if(tk) tk.textContent=gameTokens;
+  var pb=$("perfBar"); if(pb) pb.style.width=Math.min(100,(perfCorrect/3*100))+"%";
+  document.querySelectorAll(".perf-play").forEach(function(b){ b.disabled=gameTokens<=0; b.style.opacity=gameTokens>0?"1":".45"; });
 }
-window.toggleAmbient=toggleAmbient;
+function creditCorrectCall(id){
+  if(id){ if(perfHandled[id]) return; perfHandled[id]=1; }
+  perfCorrect++;
+  if(perfCorrect>=3){ perfCorrect=0; gameTokens++; beep(880,0.1,"sine",0.4); setTimeout(function(){ beep(1175,0.14,"sine",0.4); },110);
+    toast("🎮 Break Earned!","3 calls handled cleanly — you've earned a game. Open Decompress to play.",""); }
+  updatePerfUI();
+  if($("decompressView") && $("decompressView").classList.contains("active")) updatePerfUI();
+}
+function getFired(reason){
+  perfCorrect=0; updatePerfUI();
+  try{ beep(150,0.35,"sawtooth",0.4); }catch(e){}
+  showModal(
+    "<div class='modal-h' style='background:rgba(255,59,59,.12)'><h3 style='color:var(--p1)'>🚫 You've Been Let Go</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b' style='text-align:center'>"+
+      "<div style='font-size:46px;margin:2px 0 6px'>📋❌</div>"+
+      "<p style='font-size:15px;margin:0 0 8px'><b>"+esc(reason)+"</b></p>"+
+      "<p style='color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.6'>Rushing or skipping steps on a 911 call puts lives at risk — that's how people get hurt. Slow down and work each call fully. Your clean-call streak has been reset.</p>"+
+      "<button class='btn' style='width:auto' onclick='closeModal()'>I understand — re-apply</button>"+
+    "</div>");
+}
+// ---- Mini-games (a Break Room reward) ----
+function playGame(which){
+  if(gameTokens<=0){ toast("No Game Breaks Yet","Handle 3 calls cleanly (no rushing) to earn a game.","backup"); return; }
+  gameTokens--; updatePerfUI();
+  if(which==="ttt") openTicTac(); else openMemory();
+}
+function openMemory(){
+  var base=["🌲","🦊","🐢","🌻","🍄","🦉","🐝","🌙"], deck=base.concat(base);
+  for(var i=deck.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=deck[i];deck[i]=deck[j];deck[j]=t; }
+  showModal("<div class='modal-h'><h3>🧠 Memory Match</h3><button class='x' onclick='closeModal()'>×</button></div><div class='modal-b'><p style='color:var(--muted);font-size:13px;margin:0 0 12px'>Find all eight pairs. Take your time — no rush here.</p><div class='mem-grid' id='memGrid'></div><div id='memMsg' style='text-align:center;margin-top:12px;font-weight:700;min-height:20px'></div></div>");
+  var grid=$("memGrid"), first=null, lock=false, matched=0;
+  deck.forEach(function(em){
+    var card=el("div","mem-card"); card.innerHTML="<span class='mf'>?</span>";
+    card.onclick=function(){
+      if(lock||card.classList.contains("flip")||card.classList.contains("done"))return;
+      card.classList.add("flip"); card.querySelector(".mf").textContent=em;
+      if(!first){ first=card; first._em=em; return; }
+      if(first._em===em){ first.classList.add("done"); card.classList.add("done"); matched++; first=null;
+        if(matched===base.length){ $("memMsg").textContent="🎉 Solved — nicely done."; beep(880,0.1,"sine",0.4); setTimeout(function(){beep(1319,0.16,"sine",0.4);},120); } }
+      else { lock=true; var f=first; setTimeout(function(){ f.classList.remove("flip"); f.querySelector(".mf").textContent="?"; card.classList.remove("flip"); card.querySelector(".mf").textContent="?"; first=null; lock=false; },720); }
+    };
+    grid.appendChild(card);
+  });
+}
+function openTicTac(){
+  var b=["","","","","","","","",""], over=false, L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  function winr(bd){ for(var i=0;i<L.length;i++){var a=L[i]; if(bd[a[0]]&&bd[a[0]]===bd[a[1]]&&bd[a[1]]===bd[a[2]]) return bd[a[0]];} return null; }
+  function render(){ var g=$("tttGrid"); if(!g)return; g.innerHTML=""; b.forEach(function(v,i){ var c=el("div","ttt-cell",v); if(v)c.classList.add("filled"); c.onclick=function(){ move(i); }; g.appendChild(c); }); }
+  function tryLine(sym){ for(var k=0;k<L.length;k++){var a=L[k]; var cnt=0,empty=-1; a.forEach(function(x){ if(b[x]===sym)cnt++; else if(!b[x])empty=x; }); if(cnt===2&&empty>=0)return empty;} return -1; }
+  function aiMove(){ var me="😎"; var mv=tryLine(me); if(mv<0)mv=tryLine("🙂"); if(mv<0){ if(!b[4])mv=4; else { var free=[]; b.forEach(function(v,i){if(!v)free.push(i);}); mv=free[Math.floor(Math.random()*free.length)]; } } if(mv>=0)b[mv]=me; }
+  function end(msg){ over=true; var m=$("tttMsg"); if(m)m.textContent=msg; }
+  function move(i){ if(over||b[i])return; b[i]="🙂"; render(); if(winr(b)==="🙂"){ end("You win! 🎉 Nicely played."); return; } if(b.every(function(x){return x;})){ end("Draw — well matched."); return; }
+    setTimeout(function(){ aiMove(); render(); if(winr(b)==="😎") end("Supervisor takes it — rematch from the Break Room."); else if(b.every(function(x){return x;})) end("Draw — well matched."); },320); }
+  showModal("<div class='modal-h'><h3>⭕ Tic-Tac-Toe — vs the Supervisor</h3><button class='x' onclick='closeModal()'>×</button></div><div class='modal-b'><p style='color:var(--muted);font-size:13px;margin:0 0 12px;text-align:center'>You're 🙂 — go first.</p><div class='ttt-grid' id='tttGrid'></div><div id='tttMsg' style='text-align:center;margin-top:12px;font-weight:700;min-height:20px'></div></div>");
+  render();
+}
+window.playGame=playGame;
 
 // ============================================================
 //  LIGHT / DARK THEME
@@ -2722,12 +2846,12 @@ var streetRefreshTick=0;
 function aiClearWithReport(c){
   var u=null; for(var i=0;i<c.assigned.length;i++){ var x=unitById(c.assigned[i]); if(x){ u=x; break; } }
   var by=u?u.callsign:"UNIT", onm=u?u.name:officerName();
-  var rp={ id:uid(), num:"FW-26-"+(reportSeq++), by:by, officerName:onm, created:Date.now(), status:"approved",
+  var rp={ id:uid(), num:"FW-26-"+(reportSeq++), by:by, officerName:onm, created:Date.now(), status:"review",
     type:mapCallTypeToOffense(c.type), occurred:(c.times&&c.times.received)||Date.now(),
     location:c.street||rand(FALLBACK_STREETS), suspectName:"", suspectDesc:"", victimName:rand(["Anonymous","RP on scene","Resident","Complainant"]),
     vehicle:"", charges:"", property:"",
     narrative:by+" responded to call #"+c.num+" ("+c.type+") at "+c.street+". Scene investigated; call cleared Code 4.",
-    history:[{t:now(),s:"Report auto-filed & approved on clear — "+by}], callNum:c.num };
+    history:[{t:now(),s:"Filed for supervisor review by "+by}], callNum:c.num };
   reports.unshift(rp); if(reports.length>250) reports.pop();
   updateRecordsBadge();
   if(typeof grantDecompress==="function") grantDecompress();   // each filed report earns a 1-min decompress break
@@ -2778,6 +2902,28 @@ function startSimulation(){
     });
     resolvable.forEach(function(c){ aiClearWithReport(c); });
   }, 6000);
+
+  // AI SUPERVISOR reviews filed reports — approves most, returns some for correction (dispatch & call-taker)
+  setInterval(function(){
+    if(isOfficer()) return;
+    var pend=reports.filter(function(r){ return r.status==="review"; });
+    if(!pend.length) return;
+    var sup=units.filter(function(u){return u.type==="Supervisor";})[0];
+    var supName=sup?sup.callsign+" (Supv)":"Supervisor";
+    var r=pend[pend.length-1];   // oldest pending
+    if(Math.random()<0.78){
+      r.status="approved"; r.history.push({t:now(),s:"✅ Approved by "+supName});
+      logEvent("✅ "+supName+" approved report "+r.num,"status");
+    } else {
+      r.status="returned";
+      var reason=rand(["add a suspect description","clarify the narrative","missing property/evidence details","correct the location","add the victim statement","attach the call disposition"]);
+      r.history.push({t:now(),s:"↩ Returned by "+supName+" — "+reason});
+      logEvent("↩ "+supName+" returned report "+r.num+" — "+reason,"backup");
+      toast("↩ Report Returned",r.num+" — "+supName+" asks you to "+reason+".","backup");
+    }
+    updateRecordsBadge();
+    if($("recordsView") && $("recordsView").classList.contains("active")) renderReports();
+  }, 11000);
 
   // new incoming calls
   function scheduleCall(){

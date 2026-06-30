@@ -936,6 +936,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 <!-- MORE popover (sidebar flyout) -->
 <div id="morePop" class="more-pop">
   <h5>Reference &amp; Guides</h5>
+  <button id="guideTokensBtn" data-guide="tokens" style="display:none"><span class="gi">🏆</span>Tokens &amp; Points</button>
   <button data-guide="recovery"><span class="gi">🛟</span>Disaster Recovery</button>
   <button data-guide="dispatcher"><span class="gi">🎧</span>Dispatcher Guide</button>
   <button data-guide="officer"><span class="gi">🚓</span>Officer (MDT) Guide</button>
@@ -1225,6 +1226,8 @@ function applyRoleUI(){
     var key = n.dataset.view || (n.id==="codesBtn"?"codes":(n.id==="moreBtn"?"more":null));
     if(key && show[key]!=null) n.style.display = show[key]?"":"none";
   });
+  // "Tokens & Points" guide is only for dispatch & call-takers (they earn them)
+  var tk=$("guideTokensBtn"); if(tk) tk.style.display = (role==="dispatcher"||role==="calltaker")?"":"none";
 }
 function startStaffSession(){
   $("login").style.display="none";
@@ -2390,6 +2393,12 @@ function renderShift(){
 //  MORE — REFERENCE & GUIDES (self-contained, behind the "More" wall)
 // ============================================================
 var GUIDES={
+  tokens:{ icon:"🏆", title:"Tokens & Points", sub:"How you earn rewards in the CAD. Handle every call fully and calmly — clean work earns break time and games, while rushing costs you. There are two things you earn: break minutes and game tokens.", sections:[
+    {h:"⏱️ Break minutes (Decompress time)", bullets:["Every break unlocks 1:05 of Decompress — a calm room with forest scenes, soothing sound, and a countdown timer.","Dispatchers: every 2 calls you successfully dispatch AND clear earns one break.","911 Call Takers: every 2 call reports you complete and submit earns one break.","Your progress to the next break shows as “_ / 2” on the Decompress page."], note:"Break minutes are the reward for steady, complete work — not speed."},
+    {h:"🎮 Game tokens", bullets:["Handle 3 calls cleanly in a row and you earn 1 game token (you'll hear a little chime and see a “Break Earned!” pop-up).","Spend a token in the Decompress room to play a quick game like Tic-Tac-Toe.","Your clean-call streak shows as “_ / 3.” Reach 3 and it resets, banking a token.","Tokens stack — earn several and play more than once."], note:"“Cleanly” means the call was actually worked: a unit was sent, or the 911 report was filled out properly."},
+    {h:"🚫 Rushing resets you", bullets:["Clearing a call without sending a single unit = you're let go, and your streak resets to 0.","Submitting a 911 report with blank boxes = you're let go (type N/A if a field truly doesn't apply).","A 911 report still needs a real location — you can't put N/A for both the address and the cross street."], warn:"Rushing or skipping steps on a real call puts lives at risk. Slow down, work each call fully, and the rewards follow."},
+    {h:"In short", bullets:["Work calls fully → earn break minutes (every 2) and game tokens (every 3 clean in a row).","Open Decompress to spend them on quiet time and games.","Cut corners → lose your streak and start over."]}
+  ]},
   recovery:{ icon:"🛟", title:"Disaster Recovery", sub:"How to keep dispatch running and restore the CAD when systems, network, or power fail. Follow these steps in order — staying calm and on the radio is the priority.", sections:[
     {h:"1 · Recognize a CAD outage", bullets:["Calls or unit statuses stop updating for 60+ seconds.","The map or unit list is frozen or blank.","Multiple stations can't log in or refresh.","You see a server, network, or power alert."], note:"The moment you suspect an outage, notify your supervisor and the on-call CAD/IT administrator. Do not wait to be sure."},
     {h:"2 · Switch to manual dispatch (failover)", steps:["Announce on the radio: “CAD is down, we are going to manual.”","Start a CAD-down log on paper or a backup doc — capture time, unit, call type, location, and disposition for every event.","Keep assigning units by voice and track their status on the status board.","Hand-number incidents sequentially so they can be re-entered later."]},

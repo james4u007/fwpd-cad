@@ -449,6 +449,28 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
 .ik-actions{display:flex;gap:10px;margin-top:18px}
 .ik-card{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px;background:var(--panel2);font-size:13px}
 @media(max-width:820px){ .dsp-body,.ik-body{flex-direction:column} .ik-grid{grid-template-columns:1fr} .dsp-col,.ik-form{border-right:0;border-bottom:1px solid var(--line)} }
+/* ===== DECOMPRESS ===== */
+.decomp{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;background:linear-gradient(160deg,#0c2a31,#123036 45%,#15333a)}
+:root[data-theme="light"] .decomp{background:linear-gradient(160deg,#dff0f1,#e8f3ef 45%,#ecf5f2)}
+.decomp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 24px;z-index:2}
+.decomp-head h2{margin:0;font-size:20px;font-weight:700;color:#e0f6f3}
+.decomp-head p{margin:5px 0 0;font-size:13px;color:#8fb7b6;max-width:440px;line-height:1.5}
+:root[data-theme="light"] .decomp-head h2{color:#163c3c} :root[data-theme="light"] .decomp-head p{color:#4f6f6d}
+.decomp-sound{flex:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#e0f6f3;border-radius:10px;padding:8px 13px;font-size:13px;cursor:pointer}
+.decomp-sound:hover{background:rgba(255,255,255,.14)}
+:root[data-theme="light"] .decomp-sound{background:rgba(20,60,60,.06);border-color:rgba(20,60,60,.16);color:#163c3c}
+.breath-wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.breath-rings{position:relative;display:flex;align-items:center;justify-content:center}
+.breath-rings:before,.breath-rings:after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(120,225,210,.22);animation:bripple 16s ease-in-out infinite}
+.breath-rings:before{width:300px;height:300px}
+.breath-rings:after{width:392px;height:392px;animation-delay:.5s}
+.breath-circle{width:210px;height:210px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#04211d;font-weight:700;font-size:18px;background:radial-gradient(circle at 38% 30%,#7fe9d8,#33a59c 58%,#1f7174);box-shadow:0 0 70px rgba(90,225,205,.4),inset 0 0 44px rgba(255,255,255,.2);animation:breathe 16s ease-in-out infinite}
+@keyframes breathe{0%{transform:scale(.52)}25%{transform:scale(1)}50%{transform:scale(1)}75%{transform:scale(.52)}100%{transform:scale(.52)}}
+@keyframes bripple{0%{transform:scale(.55);opacity:.12}25%{transform:scale(1);opacity:.42}50%{transform:scale(1);opacity:.42}75%{transform:scale(.55);opacity:.12}100%{transform:scale(.55);opacity:.12}}
+.decomp-foot{padding:14px 24px 28px;text-align:center;z-index:2}
+.decomp-tip{color:#c4e9e5;font-size:15px;min-height:22px;font-weight:600}
+.decomp-note{color:#7fa7a6;font-size:13px;margin-top:6px}
+:root[data-theme="light"] .decomp-tip{color:#235855} :root[data-theme="light"] .decomp-note{color:#5a7a78}
 </style>
 </head>
 <body>
@@ -581,6 +603,10 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <button class="nav" data-view="intake" style="display:none">
         <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
         911 Intake
+      </button>
+      <button class="nav" data-view="decompress" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg>
+        Decompress
       </button>
       <button class="nav" data-view="calls">
         <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13 1.05.36 2.07.7 3a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.13-1.13a2 2 0 0 1 2.11-.45c.93.34 1.95.57 3 .7A2 2 0 0 1 22 16.92z"/></svg>
@@ -788,6 +814,17 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <div class="view" id="dispatchView"></div>
       <!-- 911 CALL TAKING (call-taker role) -->
       <div class="view" id="intakeView"></div>
+      <!-- DECOMPRESS (dispatcher & call-taker) -->
+      <div class="view" id="decompressView">
+        <div class="decomp">
+          <div class="decomp-head">
+            <div><h2>Decompress</h2><p>Take a moment between calls. Follow the circle and breathe — it leaves the second a call needs you.</p></div>
+            <button class="decomp-sound" onclick="toggleAmbient()" id="decompSound">🔇 Ambient Off</button>
+          </div>
+          <div class="breath-wrap"><div class="breath-rings"><div class="breath-circle"><span id="breathLabel">Breathe in…</span></div></div></div>
+          <div class="decomp-foot"><div class="decomp-tip" id="decompTip"></div><div class="decomp-note">Box breathing · in 4 · hold 4 · out 4 · hold 4 — repeat. You've got this.</div></div>
+        </div>
+      </div>
       <!-- MORE / GUIDES VIEW (everything behind the "More" wall renders here) -->
       <div class="view" id="moreView"></div>
     </div>
@@ -1075,9 +1112,9 @@ function applyRoleUI(){
   var pill=$("tbStatus"); if(pill) pill.style.display = role==="officer"?"":"none";
   // sidebar visibility per role
   var show = {
-    officer:    {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:1,dispatch:0,intake:0,codes:1,more:1},
-    dispatcher: {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:0,dispatch:1,intake:0,codes:1,more:1},
-    calltaker:  {map:1,calls:1,units:0,bolo:0,records:0,alpr:0,log:1,shift:0,dispatch:0,intake:1,codes:1,more:1}
+    officer:    {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:1,dispatch:0,intake:0,decompress:0,codes:1,more:1},
+    dispatcher: {map:1,calls:1,units:1,bolo:1,records:1,alpr:1,log:1,shift:0,dispatch:1,intake:0,decompress:1,codes:1,more:1},
+    calltaker:  {map:1,calls:1,units:0,bolo:0,records:0,alpr:0,log:1,shift:0,dispatch:0,intake:1,decompress:1,codes:1,more:1}
   }[role];
   document.querySelectorAll("#sidebar .nav").forEach(function(n){
     var key = n.dataset.view || (n.id==="codesBtn"?"codes":(n.id==="moreBtn"?"more":null));
@@ -2213,6 +2250,8 @@ function switchView(v){
   if(v==="shift") renderShift();
   if(v==="dispatch") renderDispatch();
   if(v==="intake") renderIntake();
+  if(v==="decompress") renderDecompress();
+  if(v!=="decompress" && typeof stopDecompress==="function") stopDecompress();  // ambient/breathing never runs outside Decompress
 }
 function watchName(d){ var h=d.getHours(); if(h>=5&&h<14) return "Day Watch (1st)"; if(h>=14&&h<22) return "Evening Watch (2nd)"; return "Night Watch (3rd)"; }
 function logShift(unit,text){
@@ -2452,6 +2491,52 @@ function intakeSubmit(){
   intakeClear(); renderIntake();
 }
 window.intakeSyncPrio=intakeSyncPrio; window.intakeClear=intakeClear; window.intakeSubmit=intakeSubmit;
+
+// ============================================================
+//  DECOMPRESS — guided breathing + optional ambient (dispatch & call-taker)
+// ============================================================
+var BREATH_PHASES=["Breathe in…","Hold","Breathe out…","Hold"];
+var DECOMP_TIPS=["Drop your shoulders.","Unclench your jaw.","You handled that one. Reset for the next.","Long, slow exhale — let it go.","Feet on the floor. Slow breath.","One call at a time. You're doing fine.","Relax your hands.","It's okay to take this minute."];
+var decompTimer=null, decompPhase=0;
+function updateBreath(){
+  var lbl=$("breathLabel"); if(lbl) lbl.textContent=BREATH_PHASES[decompPhase];
+  if(decompPhase===0){ var t=$("decompTip"); if(t) t.textContent=rand(DECOMP_TIPS); }
+}
+function renderDecompress(){
+  var c=document.querySelector("#decompressView .breath-circle");
+  if(c){ c.style.animation="none"; void c.offsetWidth; c.style.animation=""; }   // restart the cycle on entry
+  decompPhase=0; updateBreath();
+  if(decompTimer) clearInterval(decompTimer);
+  decompTimer=setInterval(function(){ decompPhase=(decompPhase+1)%4; updateBreath(); }, 4000);
+}
+function stopDecompress(){ if(decompTimer){ clearInterval(decompTimer); decompTimer=null; } stopAmbient(); }
+// Gentle ambient pad via WebAudio — opt-in, low volume, stops the moment you leave Decompress
+var ambientNodes=null;
+function startAmbient(){
+  try{
+    if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); }
+    if(actx.state==="suspended") actx.resume();
+    var master=actx.createGain(); master.gain.value=0.0001; master.connect(actx.destination);
+    var lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=520; lp.connect(master);
+    var oscs=[]; [110,164.81,220].forEach(function(f){ var o=actx.createOscillator(); o.type="sine"; o.frequency.value=f; var g=actx.createGain(); g.gain.value=0.16; o.connect(g); g.connect(lp); o.start(); oscs.push(o); });
+    var lfo=actx.createOscillator(); lfo.type="sine"; lfo.frequency.value=0.06; var lg=actx.createGain(); lg.gain.value=160; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+    master.gain.linearRampToValueAtTime(0.14, actx.currentTime+3.5);
+    ambientNodes={oscs:oscs, lfo:lfo, master:master};
+  }catch(e){}
+}
+function stopAmbient(){
+  if(ambientNodes && actx){
+    try{ ambientNodes.master.gain.cancelScheduledValues(actx.currentTime); ambientNodes.master.gain.linearRampToValueAtTime(0, actx.currentTime+1.0);
+      var n=ambientNodes; setTimeout(function(){ try{ n.oscs.forEach(function(o){o.stop();}); n.lfo.stop(); }catch(e){} }, 1100); }catch(e){}
+  }
+  ambientNodes=null;
+  var b=$("decompSound"); if(b) b.textContent="🔇 Ambient Off";
+}
+function toggleAmbient(){
+  if(ambientNodes){ stopAmbient(); }
+  else { startAmbient(); var b=$("decompSound"); if(b) b.textContent="🔊 Ambient On"; }
+}
+window.toggleAmbient=toggleAmbient;
 
 // ============================================================
 //  LIGHT / DARK THEME

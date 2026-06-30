@@ -3048,8 +3048,9 @@ function startSimulation(){
       addCallMarker(c);
       renderCalls(); renderDuty(); updateCallsBadge(); dispatchLiveRefresh();
       var msg="#"+c.num+" "+c.type+" • "+c.code+" • "+c.street;
-      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to open","p1", function(){ openCall(c.id); }); playPriorityTone(1); }
-      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to open","", function(){ openCall(c.id); }); playPriorityTone(c.prio); }
+      var quiet=decompActive();   // on a decompress break: no call pop-ups and no beeps
+      if(c.prio===1){ logEvent("📞 PRIORITY 1 — "+msg,"prio"); if(!quiet){ toast("📞 PRIORITY 1 CALL", c.type+" — "+c.street+" · tap to open","p1", function(){ openCall(c.id); }); playPriorityTone(1); } }
+      else { logEvent("📞 New P"+c.prio+" — "+msg,"call"); if(!quiet){ if(c.prio===2) toast("New P2 Call", c.type+" — "+c.street+" · tap to open","", function(){ openCall(c.id); }); playPriorityTone(c.prio); } }
       scheduleCall();
     }, delay);
   }
@@ -3079,8 +3080,8 @@ function startSimulation(){
                times:{received:Date.now(),dispatched:Date.now()}, narrative:[{t:now(),s:"BACKUP REQUESTED by "+u.callsign}] };
       u.assignedCallId=bc.id; u.status="backup"; calls.push(bc); if(map) addCallMarker(bc);
       logEvent("🚨 "+u.callsign+" REQUESTING BACKUP — supervisor notified","backup");
-      toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to open","backup", function(){ openCall(bc.id); });
-      alertTone(); renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
+      if(!decompActive()){ toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to open","backup", function(){ openCall(bc.id); }); alertTone(); }
+      renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
     } else {
       logShift(u.callsign,"on break over 25 min — supervisor pinged");
       logEvent("⚠ "+u.callsign+" exceeded 25-min break — supervisor notified","backup");

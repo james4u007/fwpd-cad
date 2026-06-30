@@ -756,15 +756,17 @@ var STATUS = {
   unavailable:{ label:"Unavailable",color:"var(--unavail)", hex:"#7a8a9a" }
 };
 var PRIOCOLOR = {1:"#ff3b3b",2:"#ff9f1c",3:"#2ecc71"};
+// Incoming 911 / dispatched calls only — NOT officer-initiated activity (no traffic stops, parking, pursuits)
 var CALL_TYPES = [
-  {t:"Traffic Stop",p:3,code:"Sig 31"},{t:"Suspicious Person",p:3,code:"Sig 38"},
-  {t:"Welfare Check",p:3,code:"Sig 64"},{t:"Noise Complaint",p:3,code:"Sig 14"},
-  {t:"Parking Violation",p:3,code:"Sig 30"},{t:"Theft / Larceny",p:2,code:"Sig 40"},
+  {t:"Suspicious Person",p:3,code:"Sig 38"},{t:"Welfare Check",p:3,code:"Sig 64"},
+  {t:"Noise Complaint",p:3,code:"Sig 14"},{t:"Reckless Driver",p:3,code:"Sig 31"},
+  {t:"Animal Complaint",p:3,code:"Sig 16"},{t:"Abandoned Vehicle",p:3,code:"Sig 41"},
+  {t:"Intoxicated Person",p:3,code:"Sig 19"},{t:"Theft / Larceny",p:2,code:"Sig 40"},
   {t:"Vehicle Accident",p:2,code:"Sig 2"},{t:"Domestic Disturbance",p:2,code:"Sig 15"},
+  {t:"Disturbance",p:2,code:"Sig 14"},{t:"Criminal Mischief",p:2,code:"Sig 53"},
   {t:"Burglary in Progress",p:1,code:"Sig 10"},{t:"Assault",p:1,code:"Sig 4"},
   {t:"Armed Robbery",p:1,code:"Sig 36"},{t:"Shots Fired",p:1,code:"Sig 77"},
-  {t:"Medical Emergency",p:1,code:"Sig 27"},{t:"Pursuit",p:1,code:"Sig 60"},
-  {t:"Fire / Hazard",p:1,code:"Sig 25"},{t:"Disturbance",p:2,code:"Sig 14"}
+  {t:"Medical Emergency",p:1,code:"Sig 27"},{t:"Fire / Hazard",p:1,code:"Sig 25"}
 ];
 var FALLBACK_STREETS = ["W 7th St","Main St","Houston St","Throckmorton St","Commerce St",
   "Camp Bowie Blvd","University Dr","Hemphill St","W Berry St","E Rosedale St","Lancaster Ave",
@@ -1901,19 +1903,30 @@ function doBackup(c, prio, reason){
   c.prio = Math.min(c.prio, prio);
   c.narrative.push({t:now(),s:"🚨 BACKUP REQUESTED ("+("P"+prio)+")"+(reason?(" — "+reason):"")+" — dispatch notified."});
   logEvent("🚨 BACKUP REQUESTED by "+me.callsign+" — P"+prio+" — #"+c.num+" "+c.type+(reason?(" ("+reason+")"):""),"backup");
-  toast("🚨 BACKUP DISPATCHED","Dispatch notified. Nearest unit en route to "+me.callsign+" at "+c.street+".","backup");
+  toast("🚨 BACKUP REQUESTED","Dispatch notified — locating nearest available unit…","backup");
   alertTone(); setTimeout(alertTone,400);
-  // dispatch nearest available AI unit
-  var avail=units.filter(function(u){return u.ai&&(u.status==="available"||u.status==="enroute");});
-  avail.sort(function(a,b){ return dist(a,c)-dist(b,c); });
-  if(avail.length){
-    var u=avail[0];
-    assignUnitToCall(u,c,true);
-    u.status="enroute";
-    c.narrative.push({t:now(),s:u.callsign+" en route as backup (ETA "+(1+Math.floor(Math.random()*4))+" min)."});
-    logEvent(u.callsign+" assigned as BACKUP for "+me.callsign+" → #"+c.num,"backup");
-    setTimeout(function(){ toast("Backup en route", u.callsign+" responding to assist "+me.callsign+".","p1"); }, 1200);
-  }
+  // Realistic delay: dispatch locates a unit, the unit acknowledges, THEN starts responding
+  var ackDelay = 3500 + Math.random()*6500; // 3.5–10 sec
+  setTimeout(function(){
+    if(c.status==="cleared") return;
+    var avail=units.filter(function(u){return u.ai&&(u.status==="available"||u.status==="enroute");});
+    avail.sort(function(a,b){ return dist(a,c)-dist(b,c); });
+    if(avail.length){
+      var u=avail[0];
+      assignUnitToCall(u,c,true);
+      u.status="enroute";
+      var eta=1+Math.floor(Math.random()*4);
+      c.narrative.push({t:now(),s:u.callsign+" copying — en route as backup (ETA "+eta+" min)."});
+      logEvent(u.callsign+" acknowledged BACKUP for "+me.callsign+" → #"+c.num+" (ETA "+eta+" min)","backup");
+      toast("✅ Backup En Route", u.callsign+" acknowledged — responding to "+me.callsign+" (ETA "+eta+" min).","p1");
+      alertTone();
+    } else {
+      c.narrative.push({t:now(),s:"No units immediately available — backup will respond as soon as one clears."});
+      logEvent("No units available for backup to "+me.callsign+" — holding","backup");
+      toast("⏳ Backup Pending","No units available right now — backup will respond as soon as one clears.","backup");
+    }
+    refreshCallMarker(c); renderEverythingForCall(c);
+  }, ackDelay);
   refreshCallMarker(c); refreshUnitMarker(me);
   renderEverythingForCall(c); renderTopStatus(); buildSelfStatusButtons(); renderTopStatus();
 }
@@ -2239,7 +2252,7 @@ function moveUnit(u){
       var dx=c.lat-u.lat, dy=c.lng-u.lng, d=Math.sqrt(dx*dx+dy*dy), step=0.0006;
       if(d<=step){
         u.lat=c.lat; u.lng=c.lng;
-        if(u.ai){ u.status="onscene"; if(!c.times.onscene)c.times.onscene=Date.now(); c.status="onscene"; if(c.narrative)c.narrative.push({t:now(),s:u.callsign+" on scene."}); }
+        if(u.ai){ u.status="onscene"; if(!c.times.onscene)c.times.onscene=Date.now(); c.status="onscene"; if(c.narrative)c.narrative.push({t:now(),s:u.callsign+" on scene."}); if(!c.aiClearAt) c.aiClearAt=Date.now()+(25000+Math.random()*95000); }
       } else { u.lat+=dx/d*step; u.lng+=dy/d*step; }
     }
     refreshUnitMarker(u); return;
@@ -2288,9 +2301,9 @@ function startSimulation(){
         if(avail.length){ var u=avail[0]; assignUnitToCall(u,c); u.status="enroute"; refreshCallMarker(c); if($("callsView").classList.contains("active"))renderCalls(); }
       }
     });
-    // AI resolves old on-scene calls (not yours) -> feeds the Past Calls history
-    var resolvable=calls.filter(function(c){ return c.status==="onscene" && c.times.onscene && (Date.now()-c.times.onscene)>90000 && c.assigned.indexOf(self().id)<0; });
-    resolvable.forEach(function(c){ if(Math.random()<0.35){ c.narrative.push({t:now(),s:"Units clear — call resolved, Code 4."}); clearCall(c.id); } });
+    // AI units finish their calls after a realistic handle time, clear, and return to patrol (feeds Past Calls)
+    var resolvable=calls.filter(function(c){ return c.status==="onscene" && c.aiClearAt && Date.now()>c.aiClearAt && c.assigned.indexOf(self().id)<0; });
+    resolvable.forEach(function(c){ c.narrative.push({t:now(),s:"Units clear — call resolved, Code 4."}); clearCall(c.id); });
   }, 6000);
 
   // new incoming calls

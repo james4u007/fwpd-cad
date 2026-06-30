@@ -2568,12 +2568,13 @@ function renderIntake(){
      "<div class='ik-actions'><button class='btn' style='width:auto' onclick='intakeSubmit()'>📨 Create Incident → Dispatch</button><button class='btn ghost' onclick='intakeClear()'>Clear Form</button></div>"+
      "</div>"+
      "<div class='ik-side'><h3 style='margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)'>Recent / Active Calls</h3>"+recentHtml+
-       "<div style='margin-top:18px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12.5px;color:var(--muted);line-height:1.6'>📋 <b style='color:var(--text)'>Call-taker tips</b><br>• Verify the address first.<br>• Keep the caller on the line.<br>• Weapons / injuries set priority.<br>• Submit creates a live incident the dispatcher assigns.</div>"+
+       "<div style='margin-top:18px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);font-size:12.5px;color:var(--muted);line-height:1.6'>📋 <b style='color:var(--text)'>Call-taker tips</b><br>• <b style='color:var(--text)'>Fill EVERY box</b> — type <b>N/A</b> if it truly doesn't apply. A blank box counts as rushing.<br>• Verify the address first.<br>• Keep the caller on the line.<br>• Weapons / injuries set priority.<br>• Submit creates a live incident the dispatcher assigns.</div>"+
      "</div>"+
    "</div>";
 }
 function intakeSyncPrio(){ var sel=$("ik-type"); if(!sel)return; var o=sel.options[sel.selectedIndex]; var p=o&&o.getAttribute("data-p"); if(p&&$("ik-prio")) $("ik-prio").value=p; }
 function intakeClear(){ ["ik-caller","ik-cb","ik-loc","ik-apt","ik-cross","ik-people","ik-susp","ik-narr"].forEach(function(id){ var e=$(id); if(e)e.value=""; }); if($("ik-weapons"))$("ik-weapons").value="None"; if($("ik-injuries"))$("ik-injuries").value="None"; }
+function isNA(v){ return /^n\s*\/?\s*a$/i.test((v||"").trim()); }  // NA, N/A, na, n/a, etc.
 function intakeSubmit(){
   var sel=$("ik-type"); var o=sel?sel.options[sel.selectedIndex]:null;
   var typeVal=sel?sel.value:"Disturbance";
@@ -2582,7 +2583,11 @@ function intakeSubmit(){
   var addr=(($("ik-loc")&&$("ik-loc").value)||"").trim();
   var apt=(($("ik-apt")&&$("ik-apt").value)||"").trim();
   var cross=(($("ik-cross")&&$("ik-cross").value)||"").trim();
-  if(!addr && !cross){ getFired("You sent a 911 incident to Dispatch with NO location — units had nowhere to go."); return; }  // rushing = fired
+  // Every field must be consciously filled — real info OR "N/A". A blank box means you rushed.
+  var REQ=[["ik-caller","Caller Name"],["ik-cb","Callback Number"],["ik-loc","Incident Address"],["ik-apt","Apt / Unit"],["ik-cross","Cross Street"],["ik-people","# People Involved"],["ik-susp","Suspect / Vehicle Description"],["ik-narr","Caller Statement"]];
+  var blanks=REQ.filter(function(f){ return !(($(f[0])&&$(f[0]).value)||"").trim(); }).map(function(f){ return f[1]; });
+  if(blanks.length){ getFired("You left "+blanks.length+" field"+(blanks.length>1?"s":"")+" blank: "+blanks.join(", ")+". Enter the info, or type N/A if it truly doesn't apply."); return; }
+  if(isNA(addr) && isNA(cross)){ getFired("A 911 call needs a real location — “N/A” won't tell units where to go."); return; }
   var p=randInJurisdiction();
   var c={ id:uid(), num:nextCallNum++, type:typeVal, code:code, prio:prio,
           lat:p.lat, lng:p.lng, street:(addr?(addr+(apt?(" #"+apt):"")):rand(FALLBACK_STREETS)),

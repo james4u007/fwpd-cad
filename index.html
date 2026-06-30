@@ -642,6 +642,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
     <div class="tb-clock"><span id="tbTime">--:--:--</span><small id="tbDate">———</small></div>
     <div class="tb-spacer"></div>
     <div class="statusbtns" id="selfStatusBtns"></div>
+    <button class="backup-btn" id="clearAllBtn" title="Supervisor — clear every active call" style="display:none;background:#1f6feb" onclick="clearAllCalls()">🧹 CLEAR ALL CALLS</button>
     <button class="backup-btn" id="backupBtn">🚨 REQUEST BACKUP</button>
     <div style="width:1px;height:34px;background:var(--line)"></div>
     <div class="tb-officer">
@@ -1267,6 +1268,7 @@ function startShift(){
     seedCalls();
     initMap();
     renderAll();
+    updateSupervisorUI();
     startClock();
     startSimulation();
     logEvent("Shift started — "+session.callsign+" ("+session.name+") logged on as "+session.type+(usedReal?" — real GPS location acquired":""), "info");
@@ -2086,6 +2088,36 @@ function clearCall(id){
   dispatchLiveRefresh();
 }
 window.clearCall=clearCall;
+
+// ---- Supervisor master control: Clear ALL calls ----
+function activeCalls(){ return calls.filter(function(c){ return c.status!=="cleared"; }); }
+function updateSupervisorUI(){ var b=$("clearAllBtn"); if(b) b.style.display = (isOfficer() && isSupervisor()) ? "" : "none"; }
+function clearAllCalls(){
+  if(!(isOfficer() && isSupervisor())){ toast("Supervisor Only","Only a logged-on Supervisor can clear all calls.","backup"); return; }
+  var act=activeCalls();
+  if(!act.length){ toast("No Active Calls","The call board is already clear.",""); return; }
+  showModal(
+    "<div class='modal-h' style='background:rgba(31,111,235,.14)'><h3 style='color:var(--accent)'>🧹 Clear ALL Calls?</h3><button class='x' onclick='closeModal()'>×</button></div>"+
+    "<div class='modal-b'>"+
+      "<p style='font-size:14px;margin:0 0 8px'>This clears <b>"+act.length+"</b> active call"+(act.length>1?"s":"")+" and returns every assigned unit to <b>Available</b>.</p>"+
+      "<p style='color:var(--muted);font-size:12.5px;margin:0 0 16px;line-height:1.6'>Supervisor override — for a board reset at shift change, a drill, or a demo. This action is logged.</p>"+
+      "<div style='display:flex;gap:10px;justify-content:flex-end'>"+
+        "<button class='btn' style='width:auto;background:transparent;border:1px solid var(--line);color:var(--text)' onclick='closeModal()'>Cancel</button>"+
+        "<button class='btn' style='width:auto;background:#c0202a' onclick='doClearAllCalls()'>Clear "+act.length+" Call"+(act.length>1?"s":"")+"</button>"+
+      "</div>"+
+    "</div>");
+}
+function doClearAllCalls(){
+  var act=activeCalls(), n=act.length, who=self()?self().callsign:"Supervisor";
+  act.forEach(function(c){ clearCall(c.id); });
+  closeModal();
+  logEvent("⭐ Supervisor "+who+" cleared ALL calls ("+n+") — board reset","backup");
+  logShift(who, "cleared all calls ("+n+") — supervisor override");
+  toast("🧹 Board Cleared", n+" call"+(n>1?"s":"")+" cleared. All units returned to Available.","");
+  if(typeof renderAll==="function") renderAll();
+  updateCallsBadge();
+}
+window.clearAllCalls=clearAllCalls; window.doClearAllCalls=doClearAllCalls;
 
 function renderEverythingForCall(c){
   renderCalls(); renderCallDetail(); renderDuty(); renderRoster();

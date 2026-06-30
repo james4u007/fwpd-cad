@@ -364,6 +364,29 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
   .calls-list{max-height:40vh}
   .login-card h1{font-size:18px}
 }
+/* ===== MORE / GUIDES (reference center) ===== */
+.more-pop{position:fixed;left:80px;bottom:14px;width:240px;background:rgba(16,22,30,.98);border:1px solid var(--line);border-radius:12px;padding:8px;z-index:1200;box-shadow:0 14px 44px rgba(0,0,0,.6);display:none}
+.more-pop.open{display:block}
+.more-pop h5{margin:4px 8px 8px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+.more-pop button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:var(--text);padding:9px;border-radius:8px;font-size:13px;cursor:pointer}
+.more-pop button:hover{background:rgba(255,255,255,.07)}
+.more-pop .gi{font-size:15px;width:20px;text-align:center;flex:none}
+.guide-wrap{flex:1;width:100%;overflow:auto;background:var(--bg)}
+.guide-head{padding:22px 30px 18px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(61,169,252,.12),transparent)}
+.guide-head h1{margin:0;font-size:22px;font-weight:800}
+.guide-head p{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:780px;line-height:1.5}
+.guide-body{padding:18px 30px 60px;max-width:920px}
+.guide-body h2{font-size:14px;text-transform:uppercase;letter-spacing:.5px;margin:24px 0 12px;color:var(--accent)}
+.guide-body h2:first-child{margin-top:6px}
+.step{display:flex;gap:12px;margin:9px 0;align-items:flex-start}
+.step .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#04121f;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.step .t{font-size:13.5px;line-height:1.55;color:var(--text)}
+.gul{margin:6px 0 6px 2px;padding:0;list-style:none}
+.gul li{position:relative;padding:5px 0 5px 18px;font-size:13.5px;line-height:1.5;color:var(--text)}
+.gul li:before{content:"";position:absolute;left:2px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.gnote{background:rgba(255,255,255,.04);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;margin:14px 0;font-size:13px;color:var(--muted);line-height:1.5}
+.gnote.gwarn{border-left-color:var(--p1)}
+@media(max-width:760px){ .more-pop{left:62px;width:212px} }
 </style>
 </head>
 <body>
@@ -506,6 +529,10 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
       <button class="nav" id="codesBtn">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         Codes
+      </button>
+      <button class="nav" id="moreBtn" title="More — reference & guides">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        More
       </button>
     </div>
 
@@ -669,8 +696,23 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
           </div>
         </div>
       </div>
+      <!-- MORE / GUIDES VIEW (everything behind the "More" wall renders here) -->
+      <div class="view" id="moreView"></div>
     </div>
   </div>
+</div>
+
+<!-- MORE popover (sidebar flyout) -->
+<div id="morePop" class="more-pop">
+  <h5>Reference &amp; Guides</h5>
+  <button data-guide="recovery"><span class="gi">🛟</span>Disaster Recovery</button>
+  <button data-guide="dispatcher"><span class="gi">🎧</span>Dispatcher Guide</button>
+  <button data-guide="officer"><span class="gi">🚓</span>Officer (MDT) Guide</button>
+  <button data-guide="supervisor"><span class="gi">⭐</span>Supervisor Guide</button>
+  <button data-guide="safety"><span class="gi">🛡️</span>Officer Safety &amp; Panic</button>
+  <button data-guide="security"><span class="gi">🔒</span>Security &amp; CJIS</button>
+  <button data-guide="mapguide"><span class="gi">🗺️</span>Map &amp; Tools</button>
+  <button data-guide="about"><span class="gi">ℹ️</span>About / System Info</button>
 </div>
 
 <div id="toasts"></div>
@@ -1932,6 +1974,8 @@ function switchView(v){
   document.querySelectorAll(".nav").forEach(function(n){ if(n.dataset.view) n.classList.toggle("active",n.dataset.view===v); });
   document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
   $(v+"View").classList.add("active");
+  var _mb=$("moreBtn"); if(_mb) _mb.classList.remove("active");
+  if(typeof hideMorePop==="function") hideMorePop();
   if(v==="map" && map){ setTimeout(function(){ map.invalidateSize(); },60); }
   if(v==="units") renderRoster();
   if(v==="log") renderLog();
@@ -1966,6 +2010,81 @@ function renderShift(){
   $("shiftMeta").innerHTML="On duty since <b>"+hhmm(new Date(shiftStart))+"</b> &nbsp;•&nbsp; "+watchName(new Date(shiftStart))+" &nbsp;•&nbsp; "+me.callsign+" &nbsp;•&nbsp; "+STATUS[me.status].label+(pauseStart?" &nbsp;•&nbsp; <b style='color:var(--p2)'>⏸ PAUSED</b>":"");
   renderShiftLogs();
 }
+// ============================================================
+//  MORE — REFERENCE & GUIDES (self-contained, behind the "More" wall)
+// ============================================================
+var GUIDES={
+  recovery:{ icon:"🛟", title:"Disaster Recovery", sub:"How to keep dispatch running and restore the CAD when systems, network, or power fail. Follow these steps in order — staying calm and on the radio is the priority.", sections:[
+    {h:"1 · Recognize a CAD outage", bullets:["Calls or unit statuses stop updating for 60+ seconds.","The map or unit list is frozen or blank.","Multiple stations can't log in or refresh.","You see a server, network, or power alert."], note:"The moment you suspect an outage, notify your supervisor and the on-call CAD/IT administrator. Do not wait to be sure."},
+    {h:"2 · Switch to manual dispatch (failover)", steps:["Announce on the radio: “CAD is down, we are going to manual.”","Start a CAD-down log on paper or a backup doc — capture time, unit, call type, location, and disposition for every event.","Keep assigning units by voice and track their status on the status board.","Hand-number incidents sequentially so they can be re-entered later."]},
+    {h:"3 · Restore the system", steps:["Confirm power and network at the dispatch console.","Reload the CAD — refresh the browser, or relaunch the app.","Verify you can see live units and the map again.","Have one dispatcher re-enter the CAD-down log into the system.","Reconcile the hand-numbered incidents with the CAD."]},
+    {h:"4 · After action", bullets:["File the CAD-down log and record outage start and restore times.","Flag any data gaps for supervisor review.","Debrief with IT to prevent a repeat."], warn:"Never delete the manual log until every event has been entered and verified in the CAD."}
+  ]},
+  dispatcher:{ icon:"🎧", title:"Dispatcher Guide", sub:"The core dispatcher loop: take the call, assign the right unit, and keep the queue clean.", sections:[
+    {h:"Create & dispatch a call", steps:["Open the Calls tab, or click a spot on the Map to start a call there.","Enter the call type, priority, location, and caller information.","Assign the nearest Available unit.","Confirm the unit acknowledges and is En Route."]},
+    {h:"Manage the queue", bullets:["Work Priority 1 calls first — they cannot be muted or de-prioritized.","Watch the pending and hold queues; don't let calls age unassigned.","Merge obvious duplicates into a single incident.","Re-prioritize as new information comes in."]},
+    {h:"Status discipline", bullets:["Keep every unit's status current: Available, En Route, On Scene, or Unavailable.","Start a safety timer on solo units that go on scene.","Log key updates to the narrative so the next shift has context."]}
+  ]},
+  officer:{ icon:"🚓", title:"Officer (MDT) Guide", sub:"Using the Mobile Data Terminal in your unit — from logging on to clearing a call.", sections:[
+    {h:"Log on", steps:["Pick your unit / call sign, enter your badge and name.","Press Log On Duty.","Set your status to Available to start receiving calls."]},
+    {h:"Respond to a call", steps:["Tap the call alert when it pops up to route to it.","Mark En Route as you start driving.","Mark On Scene when you arrive.","Add narrative notes as the call develops.","Clear the call with a disposition when complete."]},
+    {h:"Lookups, BOLOs & backup", bullets:["Run a plate or person through ALPR / Records.","Broadcast a BOLO so every unit sees it.","Press REQUEST BACKUP if you need another unit — state your location and the nature."]}
+  ]},
+  supervisor:{ icon:"⭐", title:"Supervisor Guide", sub:"Monitoring units, calls, and shift activity across your division.", sections:[
+    {h:"Monitor", bullets:["Watch all units live on the map and in the Units tab.","Review the pending call queue and on-scene times.","Keep an eye on units that have been on a call a long time."]},
+    {h:"Oversight", steps:["Open the On Duty / shift log to review activity for all units.","Acknowledge panic and backup alerts immediately.","Reassign or stack units as call load changes."]},
+    {h:"People", note:"You'll be pinged when a unit exceeds a 25-minute break or misses a safety check-in. Confirm welfare before clearing the alert."}
+  ]},
+  safety:{ icon:"🛡️", title:"Officer Safety & Panic", sub:"Backup requests, panic activation, and safety timers — how each one works.", sections:[
+    {h:"Request backup", steps:["Press REQUEST BACKUP on the top bar.","State your location and the nature of the call.","The nearest unit is notified automatically.","Stay on the radio until backup arrives."]},
+    {h:"Panic / officer needs assistance", steps:["Activate the emergency / backup signal.","All units and the supervisor are alerted at once.","Give your location clearly.","Responders are dispatched to you immediately."]},
+    {h:"Safety timers", bullets:["Solo units that go on scene get a check-in timer.","Acknowledge the timer when prompted.","A missed check-in escalates to your supervisor."], warn:"If a safety timer is not acknowledged, dispatch treats it as an emergency and sends help."}
+  ]},
+  security:{ icon:"🔒", title:"Security & CJIS", sub:"Handling criminal-justice information responsibly. These habits keep the agency compliant and audit-ready.", sections:[
+    {h:"Access control", bullets:["Use your own unique login — never share credentials.","Lock or sign out of the terminal whenever you step away.","Report a lost or shared password right away."]},
+    {h:"CJIS-aware use", bullets:["Query criminal-justice information only for official, authorized purposes.","Never store sensitive data on personal devices.","Assume every query is logged and auditable — because it is."]},
+    {h:"If credentials are compromised", steps:["Change your password immediately.","Notify your supervisor and IT security.","Have the audit log reviewed for any misuse."]}
+  ]},
+  mapguide:{ icon:"🗺️", title:"Map & Tools", sub:"Getting the most out of the live map, routing, and the patrol-division overlay.", sections:[
+    {h:"Map buttons (right side)", bullets:["🎯 Locate me — precise GPS fix on your position.","◎ Recenter the map on you.","📍 Set your location by typing an address.","🗺️ Toggle the FWPD patrol-divisions overlay on/off.","📞 Toggle the call pins on the map."]},
+    {h:"Routing", steps:["Type an address in the “Route to address” box and press Route.","Or tap any call alert to route straight to that call.","The map shows the driving route with distance and an ETA."]},
+    {h:"Patrol divisions", bullets:["The colored overlay is the official FWPD divisions map: Central, North, Northwest, East, South, and West.","Your beat and call sign map to your division.","Units and calls appear inside their real division areas."]}
+  ]},
+  about:{ icon:"ℹ️", title:"About / System Info", sub:"What this system is and how it's built.", sections:[
+    {h:"Overview", bullets:["Fort Worth Police — Computer Aided Dispatch (training / demonstration build).","Single-page web application with a live interactive map (Leaflet · OpenStreetMap · CARTO).","Simulated units, calls, BOLOs, ALPR, and records for training and demonstration."]},
+    {h:"Good to know", note:"Demo data is simulated and is NOT connected to live CAD, NCIC/TCIC, or any criminal-justice system. Hosted at code4dispatch.com."},
+    {h:"Get back to work", bullets:["Use the sidebar to return to Map, Calls, Units, Records, and the rest at any time.","Everything in this More section is reference material only — it never changes live dispatch data."]}
+  ]}
+};
+function renderGuide(key){
+  var g=GUIDES[key]; if(!g) return "";
+  var h="<div class='guide-head'><h1>"+g.icon+" "+esc(g.title)+"</h1><p>"+esc(g.sub)+"</p></div><div class='guide-body'>";
+  g.sections.forEach(function(s){
+    h+="<h2>"+esc(s.h)+"</h2>";
+    if(s.steps) s.steps.forEach(function(t,i){ h+="<div class='step'><div class='n'>"+(i+1)+"</div><div class='t'>"+esc(t)+"</div></div>"; });
+    if(s.bullets){ h+="<ul class='gul'>"; s.bullets.forEach(function(b){ h+="<li>"+esc(b)+"</li>"; }); h+="</ul>"; }
+    if(s.note) h+="<div class='gnote'>"+esc(s.note)+"</div>";
+    if(s.warn) h+="<div class='gnote gwarn'>⚠ "+esc(s.warn)+"</div>";
+  });
+  return h+"</div>";
+}
+function openGuide(key){
+  if(!GUIDES[key]) return;
+  document.querySelectorAll(".nav").forEach(function(n){ n.classList.remove("active"); });
+  var mb=$("moreBtn"); if(mb) mb.classList.add("active");
+  document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
+  var v=$("moreView"); v.innerHTML="<div class='guide-wrap'>"+renderGuide(key)+"</div>"; v.classList.add("active");
+  hideMorePop();
+}
+function hideMorePop(){ var p=$("morePop"); if(p) p.classList.remove("open"); }
+(function(){
+  var mb=$("moreBtn"), pop=$("morePop");
+  if(mb&&pop){
+    mb.onclick=function(e){ e.stopPropagation(); pop.classList.toggle("open"); };
+    pop.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ openGuide(b.dataset.guide); }; });
+    document.addEventListener("click", function(e){ if(pop.classList.contains("open") && !pop.contains(e.target) && !mb.contains(e.target)) pop.classList.remove("open"); });
+  }
+})();
 document.querySelectorAll(".nav").forEach(function(n){
   if(n.dataset.view) n.onclick=function(){ switchView(n.dataset.view); };
 });

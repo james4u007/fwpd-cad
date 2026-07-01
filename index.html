@@ -1220,7 +1220,7 @@ function setSelfStatus(s, silent){
 //  LOGIN
 // ============================================================
 $("lg-unit").onchange = function(){ $("lg-badge").value = (this.value==="J-101") ? "S-101" : "S-100"; };
-var UNIT_PW = { "J-100":"hank", "J-101":"Off101" };
+var UNIT_PW = { "J-100":"hank", "J-101":"hank1975" };
 // ---- Login role selector (Officer / Dispatcher / 911 Call Taker) ----
 var loginRole="officer";
 function setLoginRole(r){
@@ -1419,6 +1419,14 @@ function seedUnits(){
              heading:randf(0,360), ai:false, beat:session.callsign, divBox:southDiv };
     units.push(me);
     queueGeocode({lat:me.lat,lng:me.lng,cur:me.street,set:function(s){ me.street=s; if($("myStreet"))$("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
+    // Partner J-unit — always on the map so J-100 and J-101 can see each other
+    var partnerCs = (session.callsign==="J-101") ? "J-100" : "J-101";
+    var partner={ id:uid(), callsign:partnerCs, name:(partnerCs==="J-101"?"Ofc. Hank":"Ofc. Partner"),
+      badge:(partnerCs==="J-101"?"S-101":"S-100"), type:"Patrol",
+      status:"available", lat:sp.lat+0.0018, lng:sp.lng+0.0018, street:"Locating…", isSelf:false, assignedCallId:null,
+      heading:randf(0,360), ai:true, beat:partnerCs, divBox:southDiv, partner:true };
+    units.push(partner);
+    (function(pu){ queueGeocode({lat:pu.lat,lng:pu.lng,cur:pu.street,set:function(s){ pu.street=s; refreshUnitMarker(pu); renderRoster(); }}); })(partner);
   }
   // AI units — ALL patrol units that actually patrol, plus EXACTLY ONE supervisor
   var n = staff ? 14 : (9+Math.floor(Math.random()*3));

@@ -2569,7 +2569,7 @@ var GUIDES={
   supervisor:{ icon:"⭐", title:"Supervisor Guide", sub:"Monitoring units, calls, and shift activity across your division.", sections:[
     {h:"Monitor", bullets:["Watch all units live on the map and in the Units tab.","Review the pending call queue and on-scene times.","Keep an eye on units that have been on a call a long time."]},
     {h:"Oversight", steps:["Open the On Duty / shift log to review activity for all units.","Acknowledge panic and backup alerts immediately.","Reassign or stack units as call load changes."]},
-    {h:"People", note:"You'll be pinged when a unit exceeds a 25-minute break or misses a safety check-in. Confirm welfare before clearing the alert."}
+    {h:"People", note:"You'll be pinged when a unit exceeds a 45-minute break or misses a safety check-in. Confirm welfare before clearing the alert."}
   ]},
   safety:{ icon:"🛡️", title:"Officer Safety & Panic", sub:"Backup requests, panic activation, and safety timers — how each one works.", sections:[
     {h:"Request backup", steps:["Press REQUEST BACKUP on the top bar.","State your location and the nature of the call.","The nearest unit is notified automatically.","Stay on the radio until backup arrives."]},
@@ -3272,11 +3272,11 @@ function startClock(){
         $("shiftBarLbl").textContent = (pauseStart?"⏸ Paused — ":"")+(frac>=1?"Shift complete — 10 hours on duty":Math.round(frac*100)+"% of 10-hour shift  •  "+Math.floor(rem/3600000)+"h "+Math.floor((rem%3600000)/60000)+"m remaining");
       }
       var su=self();
-      if(su && su.status==="break" && su.breakStart && !su.breakPinged && (Date.now()-su.breakStart)>1500000){
+      if(su && su.status==="break" && su.breakStart && !su.breakPinged && (Date.now()-su.breakStart)>2700000){
         su.breakPinged=true;
-        logEvent("⚠ "+su.callsign+" on break over 25 min — supervisor notified","backup");
-        logShift(su.callsign,"on break over 25 min — supervisor pinged");
-        toast("⚠ Break Exceeded", su.callsign+" has been on break over 25 minutes. Supervisor notified.","backup");
+        logEvent("⚠ "+su.callsign+" on break over 45 min — supervisor notified","backup");
+        logShift(su.callsign,"on break over 45 min — supervisor pinged");
+        toast("⚠ Break Exceeded", su.callsign+" has been on break over 45 minutes. Supervisor notified.","backup");
         alertTone();
       }
     }
@@ -3450,9 +3450,9 @@ function startSimulation(){
       if(!decompActive()){ toast("🚨 Unit Needs Backup", u.callsign+" requesting assistance at "+bc.street+" · tap to open","backup", function(){ openCall(bc.id); }); alertTone(); }
       renderCalls(); renderDuty(); refreshUnitMarker(u); updateCallsBadge();
     } else {
-      logShift(u.callsign,"on break over 25 min — supervisor pinged");
-      logEvent("⚠ "+u.callsign+" exceeded 25-min break — supervisor notified","backup");
-      toast("⚠ Break Exceeded", u.callsign+" has been on break over 25 minutes.","backup");
+      logShift(u.callsign,"on break over 45 min — supervisor pinged");
+      logEvent("⚠ "+u.callsign+" exceeded 45-min break — supervisor notified","backup");
+      toast("⚠ Break Exceeded", u.callsign+" has been on break over 45 minutes.","backup");
     }
   }, 70000);
 }

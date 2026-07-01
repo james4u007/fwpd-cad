@@ -99,6 +99,25 @@ button{font-family:inherit;cursor:pointer}
   background:linear-gradient(90deg,#ffb24d,#ff6a00,#ffb24d);box-shadow:0 6px 22px rgba(255,106,0,.45);
   transform:translateY(-102%);opacity:0;transition:transform .5s ease,opacity .5s ease}
 .heat-band.show{transform:translateY(0);opacity:1}
+/* Training scenarios */
+.scn-wrap{max-width:820px;margin:0 auto;padding:22px 20px 64px}
+.scn-head h1{font-size:22px;margin:0 0 4px}
+.scn-head p{color:var(--muted);font-size:13px;margin:0 0 4px}
+.scn-score{display:inline-block;margin:8px 0 18px;padding:6px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-weight:700;font-size:13px}
+.scn-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px 13px;margin-bottom:14px}
+.scn-cat{display:inline-block;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px}
+.scn-title{font-size:16px;font-weight:800;margin:0 0 4px}
+.scn-sit{color:var(--text);font-size:13.5px;line-height:1.55;margin:0 0 4px}
+.scn-q{font-weight:700;font-size:13.5px;margin:9px 0 10px}
+.scn-opt{display:block;width:100%;text-align:left;background:transparent;border:1px solid var(--line);color:var(--text);padding:11px 13px;border-radius:9px;font-size:13.5px;cursor:pointer;margin-bottom:8px;transition:background .15s,border-color .15s}
+.scn-opt:hover:not(:disabled){background:rgba(255,255,255,.06)}
+.scn-opt.correct{border-color:#2ec26b;background:rgba(46,194,107,.15);font-weight:700}
+.scn-opt.wrong{border-color:var(--p1);background:rgba(255,59,59,.13)}
+.scn-opt:disabled{cursor:default}
+.scn-fb{display:none;margin-top:2px;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.55;border:1px solid var(--line)}
+.scn-fb.show{display:block}
+.scn-fb.ok{background:rgba(46,194,107,.13);border-color:#2ec26b}
+.scn-fb.no{background:rgba(255,59,59,.11);border-color:var(--p1)}
 .tb-spacer{flex:1}
 .tb-officer{text-align:right;line-height:1.2}
 .tb-officer .cs{font-weight:700;font-size:15px}
@@ -977,6 +996,8 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
   <button data-guide="security"><span class="gi">🔒</span>Security &amp; CJIS</button>
   <button data-guide="mapguide"><span class="gi">🗺️</span>Map &amp; Tools</button>
   <button data-guide="about"><span class="gi">ℹ️</span>About / System Info</button>
+  <h5 style="margin-top:8px">Training</h5>
+  <button id="scenariosBtn"><span class="gi">🎯</span>Scenarios</button>
 </div>
 
 <div id="toasts"></div>
@@ -2591,11 +2612,159 @@ function openGuide(key){
   hideMorePop();
 }
 function hideMorePop(){ var p=$("morePop"); if(p) p.classList.remove("open"); }
+
+// ============================================================
+//  TRAINING SCENARIOS (multiple-choice, best-response drills)
+// ============================================================
+var SCENARIOS=[
+ {cat:"Contacts",t:"Suspect Uncooperative",s:"During a lawful stop, a subject refuses to identify himself or answer questions but is not physically resisting.",q:"What is the best next step?",o:[
+   {t:"Immediately go hands-on and handcuff him.",ok:false,w:"Force isn't justified by passive non-answering alone and can escalate the encounter."},
+   {t:"Stay calm, explain the reason for the stop, give clear lawful commands, and call for backup if needed.",ok:true,w:"De-escalation, clear communication, and backup keep control without unnecessary force."},
+   {t:"Threaten him with arrest until he talks.",ok:false,w:"Threats erode trust and can escalate; give lawful direction, not ultimatums."}]},
+ {cat:"Traffic",t:"Stolen Vehicle Hit",s:"On a traffic stop, the plate returns as a confirmed stolen vehicle with one occupant.",q:"How should you handle it?",o:[
+   {t:"Walk up to the driver window as a normal stop.",ok:false,w:"A confirmed stolen car is high-risk; a routine approach exposes you unnecessarily."},
+   {t:"Hold position, wait for backup, and conduct a high-risk / felony stop with commands from cover.",ok:true,w:"Cover, backup, and controlled commands are the safe way to handle a high-risk stop."},
+   {t:"Order everyone out and rush the vehicle alone.",ok:false,w:"Rushing alone sacrifices cover and control."}]},
+ {cat:"Domestic",t:"Domestic Disturbance",s:"You arrive to shouting inside a residence. Two adults are present and agitated.",q:"What do you do first?",o:[
+   {t:"Separate the parties, check for injuries and weapons, and interview each privately.",ok:true,w:"Separation and individual interviews reduce risk and get accurate accounts."},
+   {t:"Take the loudest person's story and clear.",ok:false,w:"One-sided info misses injuries, weapons, and the real aggressor."},
+   {t:"Arrest whoever opened the door.",ok:false,w:"Arrest must be based on evidence and law, not who answered."}]},
+ {cat:"Welfare",t:"Welfare Check",s:"An elderly resident hasn't been seen in days and isn't answering the door or phone.",q:"Best course of action?",o:[
+   {t:"Force entry right away.",ok:false,w:"Forced entry needs exigent circumstances; check other options first."},
+   {t:"Attempt contact, check with neighbors, look for signs of distress; force entry only if exigency exists.",ok:true,w:"Reasonable steps first, then forced entry only when life/safety justifies it."},
+   {t:"Leave a business card and clear.",ok:false,w:"That ignores a possible medical emergency."}]},
+ {cat:"Crisis",t:"Mental Health Crisis",s:"A subject in obvious crisis is agitated and pacing but is not armed and hasn't threatened anyone.",q:"Best approach?",o:[
+   {t:"Use loud commands and move in fast.",ok:false,w:"Rushing and yelling tend to escalate a person in crisis."},
+   {t:"Slow down, use a calm voice, create time and space, and request CIT / mental-health resources.",ok:true,w:"Time, distance, and calm communication are core crisis de-escalation."},
+   {t:"Deploy a Taser to end it quickly.",ok:false,w:"Force on a non-threatening person in crisis is inappropriate and risky."}]},
+ {cat:"Pursuit",t:"Foot Pursuit",s:"A suspect flees on foot into a dark alley with blind corners.",q:"What's the safest sound tactic?",o:[
+   {t:"Sprint in alone around every blind corner.",ok:false,w:"Tunnel vision around blind corners gets officers hurt or ambushed."},
+   {t:"Broadcast your location and direction, set a perimeter, and balance the risk against the offense.",ok:true,w:"Communication, containment, and risk assessment beat a reckless solo chase."},
+   {t:"Fire a warning shot to make him stop.",ok:false,w:"Warning shots are dangerous and prohibited by most policies."}]},
+ {cat:"Use of Force",t:"Actively Resisting",s:"A subject is actively pulling away and tensing to prevent being handcuffed.",q:"How much force is appropriate?",o:[
+   {t:"Force that is reasonable and proportional to the resistance, reassessing continuously.",ok:true,w:"Force must match the resistance and stop when compliance is achieved."},
+   {t:"Maximum force immediately to end it fast.",ok:false,w:"Excessive force is unlawful and unsafe."},
+   {t:"Stand back and wait indefinitely.",ok:false,w:"Doing nothing during active resistance loses control of the scene."}]},
+ {cat:"Traffic",t:"Furtive Movement",s:"On a stop, the driver suddenly reaches down under the seat.",q:"Best reaction?",o:[
+   {t:"Ignore it and keep writing.",ok:false,w:"Ignoring a possible weapon reach is dangerous."},
+   {t:"Give clear commands to show hands, use cover and distance, and be ready to react.",ok:true,w:"Commands plus cover let you control the threat without overreacting."},
+   {t:"Immediately draw and fire.",ok:false,w:"Deadly force requires an imminent threat, not a movement alone."}]},
+ {cat:"Medical",t:"Unresponsive Subject",s:"A subject on scene is unconscious and not breathing.",q:"What do you do?",o:[
+   {t:"Wait for EMS and do nothing.",ok:false,w:"Every second counts; begin aid now."},
+   {t:"Begin CPR, request EMS, and use an AED if available.",ok:true,w:"Immediate life-saving aid and EMS give the best chance of survival."},
+   {t:"Keep investigating the scene.",ok:false,w:"Preserving life takes priority over the investigation."}]},
+ {cat:"Critical",t:"Active Shooter",s:"You are first on scene at a school with active gunfire inside.",q:"What does modern doctrine call for?",o:[
+   {t:"Set a perimeter and wait for SWAT.",ok:false,w:"Waiting costs lives; solo/team entry to stop the threat is current doctrine."},
+   {t:"Move toward the threat and stop it as trained.",ok:true,w:"Rapid movement to neutralize the shooter saves lives."},
+   {t:"Evacuate yourself and hold outside.",ok:false,w:"Holding outside during active killing is contrary to doctrine."}]},
+ {cat:"Persons",t:"Missing Child",s:"A parent reports their young child missing just minutes ago.",q:"How should you treat it?",o:[
+   {t:"Take a report and follow up tomorrow.",ok:false,w:"A missing young child is time-critical, not a next-day task."},
+   {t:"Treat it as urgent: get a description, broadcast a BOLO, and start an immediate search.",ok:true,w:"Fast description, BOLO, and search maximize the chance of a safe recovery."},
+   {t:"Tell them to wait 24 hours.",ok:false,w:"The 24-hour rule is a myth; act immediately."}]},
+ {cat:"Traffic",t:"Suspected DUI",s:"A driver is weaving and there's an odor of alcohol on their breath.",q:"Best procedure?",o:[
+   {t:"Let them go with a warning.",ok:false,w:"Releasing a likely impaired driver endangers the public."},
+   {t:"Conduct field sobriety tests, gather evidence, arrest if impaired, and document thoroughly.",ok:true,w:"Proper testing and documentation support a lawful DUI arrest."},
+   {t:"Arrest without any evaluation.",ok:false,w:"Arrests need articulable evidence of impairment."}]},
+ {cat:"Officer Safety",t:"Officer Down",s:"Your partner is shot and the suspect is fleeing.",q:"What's your priority?",o:[
+   {t:"Chase the suspect first.",ok:false,w:"Your partner's life comes before the pursuit."},
+   {t:"Call it out, render aid (tourniquet), and request EMS and backup.",ok:true,w:"Care for the officer and get help; the suspect can be caught later."},
+   {t:"Freeze and wait for orders.",ok:false,w:"Immediate aid and a radio call are essential."}]},
+ {cat:"Contacts",t:"Suspicious Person",s:"Someone is loitering by a closed business late at night.",q:"What can you lawfully do first?",o:[
+   {t:"Detain and search immediately.",ok:false,w:"Detention/search needs reasonable suspicion you can articulate."},
+   {t:"Make consensual contact and articulate reasonable suspicion before any detention.",ok:true,w:"A consensual stop plus articulable facts keeps the contact lawful."},
+   {t:"Ignore it and drive on.",ok:false,w:"A reasonable inquiry is warranted here."}]},
+ {cat:"Property",t:"Burglary In Progress",s:"A silent alarm call: you find the business door standing ajar.",q:"Best tactic?",o:[
+   {t:"Walk in loudly announcing yourself, alone.",ok:false,w:"Entering alone gives up containment and cover."},
+   {t:"Set up containment, wait for backup, then coordinate a building search.",ok:true,w:"Containment and a coordinated search are safest for an in-progress call."},
+   {t:"Clear the whole building solo as fast as possible.",ok:false,w:"Solo fast-clearing is high-risk and unnecessary."}]},
+ {cat:"Public Order",t:"Protest With Agitators",s:"A large demonstration is mostly peaceful, but a few individuals begin breaking windows.",q:"Best response?",o:[
+   {t:"Disperse the entire crowd with force.",ok:false,w:"Blanket force on lawful demonstrators is improper and inflames the crowd."},
+   {t:"Protect the lawful assembly, isolate the specific offenders, and use a measured response.",ok:true,w:"Targeting offenders while protecting rights is the balanced approach."},
+   {t:"Ignore the property destruction.",ok:false,w:"Crimes in progress still require action."}]},
+ {cat:"Legal",t:"Consent Search",s:"You want to search a vehicle but have no warrant and no probable cause.",q:"What's proper?",o:[
+   {t:"Search it anyway.",ok:false,w:"Searching without legal basis violates the Fourth Amendment."},
+   {t:"Ask for voluntary consent; if refused, do not search without a legal basis.",ok:true,w:"Consent must be voluntary, and refusal must be respected absent PC or a warrant."},
+   {t:"Threaten to hold them until they consent.",ok:false,w:"Coerced consent is invalid."}]},
+ {cat:"Legal",t:"Miranda",s:"You have a suspect in custody and want to question them about the crime.",q:"When must you advise Miranda?",o:[
+   {t:"Question first, then read rights later.",ok:false,w:"Statements from un-warned custodial interrogation are typically inadmissible."},
+   {t:"Advise Miranda before custodial interrogation.",ok:true,w:"Custody + interrogation triggers Miranda beforehand."},
+   {t:"Miranda is never required.",ok:false,w:"It is required for custodial interrogation."}]},
+ {cat:"Pursuit",t:"Vehicle Pursuit Risk",s:"A pursuit enters a crowded area and the danger to the public is climbing.",q:"What should guide you?",o:[
+   {t:"Continue the pursuit at all costs.",ok:false,w:"Pursuits must be continuously weighed against public danger."},
+   {t:"Continuously balance the risk versus the need, and terminate when danger outweighs it.",ok:true,w:"Risk-versus-need assessment and willingness to terminate protect the public."},
+   {t:"Ram the vehicle immediately.",ok:false,w:"PIT/ramming is a policy-restricted force option, not a first resort."}]},
+ {cat:"Evidence",t:"Recovered Firearm",s:"You locate a firearm connected to a crime scene.",q:"How do you handle the evidence?",o:[
+   {t:"Put it in your pocket for now.",ok:false,w:"That breaks chain of custody and can destroy evidentiary value."},
+   {t:"Photograph, document, collect and package it properly, and maintain chain of custody.",ok:true,w:"Proper documentation and chain of custody preserve the evidence."},
+   {t:"Leave it where it is and move on.",ok:false,w:"Evidence must be secured and collected."}]},
+ {cat:"De-escalation",t:"Hostile But Compliant",s:"A subject is verbally hostile and insulting but is following your instructions.",q:"Best response?",o:[
+   {t:"Match their hostility.",ok:false,w:"Trading insults escalates and undermines professionalism."},
+   {t:"Stay professional and calm, and use time and distance.",ok:true,w:"Words alone don't justify force; professionalism de-escalates."},
+   {t:"Handcuff them for their attitude.",ok:false,w:"You can't detain someone solely for being rude."}]},
+ {cat:"Communications",t:"Radio Discipline",s:"The channel is busy with active traffic and you need to run a plate.",q:"Best practice?",o:[
+   {t:"Key up and talk over the other units.",ok:false,w:"Talking over traffic can bury emergency transmissions."},
+   {t:"Wait for a break, be clear and concise, and yield to emergency traffic.",ok:true,w:"Disciplined, concise radio use keeps the channel usable for everyone."},
+   {t:"Use slang and profanity to be quick.",ok:false,w:"Unprofessional radio traffic is recorded and improper."}]},
+ {cat:"Medical",t:"Crash With Injuries",s:"You are first to arrive at a serious traffic crash with injured occupants.",q:"What comes first?",o:[
+   {t:"Start writing the crash report.",ok:false,w:"Paperwork waits; life safety and scene control come first."},
+   {t:"Establish scene safety, request EMS, render aid, and protect the scene.",ok:true,w:"Safety, EMS, aid, and scene protection are the correct priorities."},
+   {t:"Move the vehicles out of the way first.",ok:false,w:"Moving vehicles can worsen injuries and destroy evidence."}]},
+ {cat:"Critical",t:"Hostage Situation",s:"An armed subject is holding a hostage inside a residence.",q:"Best initial approach?",o:[
+   {t:"Rush in shooting to end it.",ok:false,w:"A reckless entry endangers the hostage."},
+   {t:"Contain, establish communication, and request negotiators / SWAT while preserving life.",ok:true,w:"Containment, communication, and specialized resources protect the hostage."},
+   {t:"Leave the scene and let it resolve itself.",ok:false,w:"Abandoning a hostage scene is not an option."}]},
+ {cat:"K-9",t:"K-9 Deployment",s:"A fleeing felony suspect is believed hiding in a yard near bystanders.",q:"Proper use of the K-9?",o:[
+   {t:"Release the dog with no warning into the area.",ok:false,w:"No warning and bystanders present is a liability and safety problem."},
+   {t:"Give a clear K-9 warning/announcement, follow policy, and account for bystanders.",ok:true,w:"A warning, policy compliance, and bystander awareness make deployment lawful and safe."},
+   {t:"Never use the K-9 under any circumstances.",ok:false,w:"K-9s are a valid tool when used within policy."}]}
+];
+var scenAnswered={}, scenScore={correct:0,done:0};
+function openScenarios(){
+  document.querySelectorAll(".nav").forEach(function(n){ n.classList.remove("active"); });
+  var mb=$("moreBtn"); if(mb) mb.classList.add("active");
+  document.querySelectorAll(".view").forEach(function(x){ x.classList.remove("active"); });
+  var v=$("moreView"); v.innerHTML=renderScenarios(); v.classList.add("active");
+  hideMorePop();
+}
+window.openScenarios=openScenarios;
+function renderScenarios(){
+  var h="<div class='scn-wrap'><div class='scn-head'><h1>🎯 Training Scenarios</h1>"+
+    "<p>Read each situation and pick the best response. You'll get instant feedback and the recommended answer. Training use only — always follow your agency's policy.</p>"+
+    "<span class='scn-score' id='scnScore'>Score: "+scenScore.correct+" / "+scenScore.done+"</span></div>";
+  for(var i=0;i<SCENARIOS.length;i++){ var sc=SCENARIOS[i];
+    h+="<div class='scn-card' id='scn-"+i+"'><span class='scn-cat'>"+esc(sc.cat)+"</span>"+
+       "<div class='scn-title'>"+(i+1)+". "+esc(sc.t)+"</div>"+
+       "<div class='scn-sit'>"+esc(sc.s)+"</div><div class='scn-q'>"+esc(sc.q)+"</div>";
+    for(var j=0;j<sc.o.length;j++){ h+="<button class='scn-opt' id='scn-"+i+"-o-"+j+"' onclick='answerScenario("+i+","+j+")'>"+esc(sc.o[j].t)+"</button>"; }
+    h+="<div class='scn-fb' id='scn-"+i+"-fb'></div></div>";
+  }
+  return h+"</div>";
+}
+window.renderScenarios=renderScenarios;
+function answerScenario(i,j){
+  if(scenAnswered[i]!=null) return;
+  var sc=SCENARIOS[i]; scenAnswered[i]=j; scenScore.done++;
+  var chosen=sc.o[j]; if(chosen.ok) scenScore.correct++;
+  var correctIdx=-1;
+  for(var k=0;k<sc.o.length;k++){ var b=$("scn-"+i+"-o-"+k); if(!b) continue; b.disabled=true;
+    if(sc.o[k].ok){ b.classList.add("correct"); correctIdx=k; }
+    if(k===j && !sc.o[k].ok) b.classList.add("wrong");
+  }
+  var fb=$("scn-"+i+"-fb");
+  if(fb){ fb.className="scn-fb show "+(chosen.ok?"ok":"no");
+    var msg=(chosen.ok?"✅ Correct. ":"❌ Not the best choice. ")+esc(chosen.w);
+    if(!chosen.ok && correctIdx>=0) msg+="<br><b>Best answer:</b> "+esc(sc.o[correctIdx].t);
+    fb.innerHTML=msg;
+  }
+  var se=$("scnScore"); if(se) se.textContent="Score: "+scenScore.correct+" / "+scenScore.done;
+}
+window.answerScenario=answerScenario;
+
 (function(){
   var mb=$("moreBtn"), pop=$("morePop");
   if(mb&&pop){
     mb.onclick=function(e){ e.stopPropagation(); pop.classList.toggle("open"); };
-    pop.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ openGuide(b.dataset.guide); }; });
+    pop.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ if(b.id==="scenariosBtn") openScenarios(); else openGuide(b.dataset.guide); }; });
     document.addEventListener("click", function(e){ if(pop.classList.contains("open") && !pop.contains(e.target) && !mb.contains(e.target)) pop.classList.remove("open"); });
   }
 })();

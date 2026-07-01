@@ -110,6 +110,20 @@ button{font-family:inherit;cursor:pointer}
 .backup-btn:hover{filter:brightness(1.08)}
 .backup-btn.alert{animation:pulse 1s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,59,59,.55)}70%{box-shadow:0 0 0 12px rgba(255,59,59,0)}100%{box-shadow:0 0 0 0 rgba(255,59,59,0)}}
+/* PANIC — bright orange emergency button */
+.panic-btn{
+  background:linear-gradient(160deg,#ff8a00,#ff6a00);border:none;color:#1a0e00;font-weight:900;
+  padding:9px 14px;border-radius:9px;font-size:13px;letter-spacing:.4px;text-shadow:0 1px 0 rgba(255,255,255,.25);
+  box-shadow:0 0 0 0 rgba(255,122,0,.7);animation:panicPulse 1.1s infinite;cursor:pointer;
+}
+.panic-btn:hover{filter:brightness(1.08)}
+@keyframes panicPulse{0%{box-shadow:0 0 0 0 rgba(255,122,0,.6)}70%{box-shadow:0 0 0 12px rgba(255,122,0,0)}100%{box-shadow:0 0 0 0 rgba(255,122,0,0)}}
+/* PANIC call flash (list row + map marker) */
+.call-row.panic{animation:panicFlash 0.9s steps(1) infinite}
+@keyframes panicFlash{0%,49%{background:rgba(255,122,0,.22);box-shadow:inset 3px 0 0 #ff7a00}50%,100%{background:transparent;box-shadow:inset 3px 0 0 rgba(255,122,0,.35)}}
+.call-marker.panic svg path{animation:panicMk 0.7s steps(1) infinite}
+.call-marker.panic{filter:drop-shadow(0 0 6px rgba(255,122,0,.9))}
+@keyframes panicMk{0%,49%{fill:#ff7a00}50%,100%{fill:#7a1500}}
 
 #main{flex:1;display:flex;min-height:0}
 #sidebar{
@@ -645,6 +659,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
     <div class="tb-spacer"></div>
     <div class="statusbtns" id="selfStatusBtns"></div>
     <button class="backup-btn" id="clearAllBtn" title="Developer — clear every active call" style="display:none;background:#1f6feb" onclick="clearAllCalls()">🛠 CLEAR ALL CALLS</button>
+    <button class="panic-btn" id="panicBtn" title="Emergency activation — officer needs assistance" onclick="activatePanic()">🟠 PANIC</button>
     <button class="backup-btn" id="backupBtn">🚨 REQUEST BACKUP</button>
     <div style="width:1px;height:34px;background:var(--line)"></div>
     <div class="tb-officer">
@@ -1110,6 +1125,11 @@ function alertTone(){ // P1 / backup — urgent 4-pulse alarm, fixed full volume
   setTimeout(function(){beep(1040,0.13,"square",0.55);},300);
   setTimeout(function(){beep(600,0.26,"square",0.55);},450);
 }
+function panicTone(){ // classic emergency hi-lo warble (Motorola-style emergency alert)
+  if(decompActive()) return;
+  var seq=[1180,780,1180,780,1180,780,1180,780];
+  for(var i=0;i<seq.length;i++){ (function(f,d){ setTimeout(function(){ beep(f,0.15,"square",0.6); }, d); })(seq[i], i*170); }
+}
 function playPriorityTone(prio){
   if(decompActive()) return;                          // silence incoming-call tones during a decompress break
   if(prio===1){ alertTone(); return; }               // Priority 1 — always full volume
@@ -1219,7 +1239,7 @@ function startSession(){
 function applyRoleUI(){
   var role = (session&&session.role)||"officer";
   // top-bar officer-only controls
-  ["selfStatusBtns","backupBtn"].forEach(function(id){ var e=$(id); if(e) e.style.display = role==="officer"?"":"none"; });
+  ["selfStatusBtns","backupBtn","panicBtn"].forEach(function(id){ var e=$(id); if(e) e.style.display = role==="officer"?"":"none"; });
   var pill=$("tbStatus"); if(pill) pill.style.display = role==="officer"?"":"none";
   // sidebar visibility per role
   var show = {
@@ -1443,7 +1463,7 @@ function callIcon(c){
   var col=PRIOCOLOR[c.prio];
   return L.divIcon({
     className:"",
-    html:'<div class="call-marker"><svg viewBox="0 0 26 34"><path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z" fill="'+col+'"/></svg><span>'+c.prio+'</span></div>',
+    html:'<div class="call-marker'+(c.panic?" panic":"")+'"><svg viewBox="0 0 26 34"><path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 21 13 21s13-12 13-21C26 5.8 20.2 0 13 0z" fill="'+col+'"/></svg><span>'+(c.panic?"!":c.prio)+'</span></div>',
     iconSize:[26,34], iconAnchor:[13,34]
   });
 }
@@ -1886,7 +1906,7 @@ function renderCalls(){
   sc.innerHTML="";
   if(list.length===0){ sc.appendChild(el("div","cd-empty",isHist?"No calls cleared in this window yet.":"No calls match this filter.")); updateCallsBadge(); return; }
   list.forEach(function(c){
-    var row=el("div","call-row"+(c.id===selectedCallId?" sel":""));
+    var row=el("div","call-row"+(c.id===selectedCallId?" sel":"")+(c.panic?" panic":""));
     var stClass = c.status==="active"?"st-active":c.status==="dispatched"?"st-dispatched":c.status==="onscene"?"st-onscene":"st-cleared";
     var stLabel = c.status==="active"?"PENDING":c.status==="dispatched"?"DISPATCHED":c.status==="onscene"?"ON SCENE":"CLEARED";
     var mine = c.assigned.indexOf(self().id)>=0;
@@ -2169,6 +2189,54 @@ function requestBackupNow(notes){
   renderCalls();
 }
 window.requestBackupNow=requestBackupNow;
+
+// ---- PANIC / Emergency activation (the CAD receiving a Motorola emergency) ----
+function activatePanic(){
+  if(!isOfficer()){ toast("Officer Only","The panic button is on the officer's radio/MDT.","backup"); return; }
+  var me=self(); if(!me) return;
+  var rid=me.badge?("radio "+me.badge):me.callsign;
+  var c = me.assignedCallId ? callById(me.assignedCallId) : null;
+  if(c){
+    c.panic=true; c.prio=1; if(c.assigned.indexOf(me.id)<0) assignUnitToCall(me,c);
+  } else {
+    c={ id:uid(), num:nextCallNum++, type:"EMERGENCY — Officer Needs Assistance", code:"10-33", prio:1,
+        lat:me.lat,lng:me.lng,street:me.street,caller:me.callsign,status:"dispatched",
+        assigned:[me.id], times:{received:Date.now(),dispatched:Date.now()}, narrative:[], panic:true };
+    me.assignedCallId=c.id; calls.push(c); addCallMarker(c);
+  }
+  c.narrative.push({t:now(), s:"🟠 EMERGENCY BUTTON ACTIVATED by "+me.callsign+" ("+rid+") — last known location "+me.street});
+  setSelfStatus("backup",true);
+  logEvent("🟠 EMERGENCY ACTIVATION — "+me.callsign+" ("+rid+") at "+me.street,"backup");
+  toast("🟠 EMERGENCY ACTIVATION", me.callsign+" needs assistance — "+me.street+" · tap to open","backup", function(){ openCall(c.id); });
+  panicTone(); setTimeout(panicTone,1500);
+  selectedCallId=c.id;
+  refreshCallMarker(c); renderCalls(); renderCallDetail(); renderDuty();
+  if(map){ try{ map.setView([c.lat,c.lng], 15); }catch(e){} }
+  dispatchEmergencyResponders(c);
+}
+window.activatePanic=activatePanic;
+function dispatchEmergencyResponders(c){
+  var me=self();
+  var ackDelay = 2200 + Math.random()*3300; // emergency: faster than a routine backup
+  setTimeout(function(){
+    if(c.status==="cleared") return;
+    var avail=units.filter(function(u){ return u.ai && (u.status==="available"||u.status==="enroute") && c.assigned.indexOf(u.id)<0; });
+    avail.sort(function(a,b){ return dist(a,c)-dist(b,c); });
+    var sent=avail.slice(0,2), names=[];
+    sent.forEach(function(u){ assignUnitToCall(u,c,true); u.status="enroute"; var eta=1+Math.floor(Math.random()*3);
+      c.narrative.push({t:now(),s:u.callsign+" copying EMERGENCY — en route (ETA "+eta+" min)."});
+      logEvent(u.callsign+" responding CODE 3 to EMERGENCY — "+(me?me.callsign:"")+" → #"+c.num,"backup");
+      refreshUnitMarker(u); names.push(u.callsign);
+    });
+    // pull a supervisor too
+    var sups=units.filter(function(u){ return u.ai && u.type==="Supervisor" && u.status!=="unavailable" && c.assigned.indexOf(u.id)<0; });
+    if(sups.length){ var s=sups[0]; assignUnitToCall(s,c,true); s.status="enroute";
+      c.narrative.push({t:now(),s:s.callsign+" (Supervisor) en route to the emergency."}); names.push(s.callsign+" (Supv)"); refreshUnitMarker(s); }
+    if(names.length){ toast("✅ Units Responding", names.join(", ")+" en route CODE 3.","p1"); if(!decompActive()) alertTone(); }
+    else { c.narrative.push({t:now(),s:"No units immediately available — responding as soon as one clears."}); }
+    refreshCallMarker(c); renderCalls(); renderCallDetail(); renderDuty();
+  }, ackDelay);
+}
 // Top-bar backup: optional notes, no priority picker
 $("backupBtn").onclick=function(){
   showModal(

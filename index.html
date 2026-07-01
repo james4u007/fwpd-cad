@@ -88,6 +88,11 @@ button{font-family:inherit;cursor:pointer}
 .tb-dept small{display:block;color:var(--muted);font-weight:400;font-size:11px}
 .tb-clock{font-size:15px;color:var(--text);min-width:96px;text-align:center}
 .tb-clock small{display:block;color:var(--muted);font-size:10px;letter-spacing:.5px}
+.tb-weather{display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:9px;background:var(--panel);border:1px solid var(--line);cursor:default}
+.tb-weather .wx-ic{font-size:19px;line-height:1}
+.tb-weather .wx-t{display:flex;flex-direction:column;line-height:1.1}
+.tb-weather .wx-t b{font-size:14px;color:var(--text);font-weight:700}
+.tb-weather .wx-t small{font-size:9.5px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
 .tb-spacer{flex:1}
 .tb-officer{text-align:right;line-height:1.2}
 .tb-officer .cs{font-weight:700;font-size:15px}
@@ -656,6 +661,7 @@ input[type=range]:disabled{accent-color:var(--p1);opacity:.85}
     <img class="tb-logo" src="c4-logo.png" alt="Code 4 Dispatch">
     <div class="tb-dept" id="tbDept">Police Dept<small id="tbDeptSub">Computer Aided Dispatch</small></div>
     <div class="tb-clock"><span id="tbTime">--:--:--</span><small id="tbDate">———</small></div>
+    <div class="tb-weather" id="tbWeather" title="Loading weather…"><span class="wx-ic">🌡️</span><span class="wx-t"><b id="wxTemp">--°</b><small id="wxCond">Weather</small></span></div>
     <div class="tb-spacer"></div>
     <div class="statusbtns" id="selfStatusBtns"></div>
     <button class="backup-btn" id="clearAllBtn" title="Developer — clear every active call" style="display:none;background:#1f6feb" onclick="clearAllCalls()">🛠 CLEAR ALL CALLS</button>
@@ -1276,7 +1282,7 @@ function startStaffSession(){
   $("tbCs").textContent = session.role==="dispatcher" ? "DISPATCH" : "911 CT";
   $("tbNm").textContent = session.name + (session.posid?(" • "+session.posid):"");
   TOWN.lat=32.7555; TOWN.lng=-97.3308; TOWN.real=false;
-  seedUnits(); seedCalls(); initMap(); renderAll(); startClock(); startSimulation();
+  seedUnits(); seedCalls(); initMap(); renderAll(); startClock(); startWeather(); startSimulation();
   logEvent((session.role==="dispatcher"?"Dispatcher ":"Call taker ")+session.name+" signed on.","info");
   logShift(session.callsign, "signed on — "+(session.role==="dispatcher"?"Dispatch Center":"911 Call Taking"));
   switchView(session.role==="dispatcher" ? "dispatch" : "intake");
@@ -1303,6 +1309,7 @@ function startShift(){
     renderAll();
     updateSupervisorUI();
     startClock();
+    startWeather();
     startSimulation();
     logEvent("Shift started — "+session.callsign+" ("+session.name+") logged on as "+session.type+(usedReal?" — real GPS location acquired":""), "info");
     logShift(session.callsign, "logged on duty as "+session.type);
@@ -1582,6 +1589,7 @@ function applyNewCenter(lat,lng){
   drawJurisdiction();
   queueGeocode({lat:lat,lng:lng,set:function(s){ me.street=s; $("myStreet").textContent=s; refreshUnitMarker(me); renderRoster(); }});
   renderDuty(); renderRoster();
+  if(typeof fetchWeather==="function") fetchWeather(); // refresh weather for the new location
 }
 if($("setLocBtn")) $("setLocBtn").onclick=openLocationModal;
 if($("jdToggleBtn")) $("jdToggleBtn").onclick=toggleJdOverlay;
@@ -3012,6 +3020,50 @@ applyTheme();
 document.querySelectorAll(".nav").forEach(function(n){
   if(n.dataset.view) n.onclick=function(){ switchView(n.dataset.view); };
 });
+
+// ============================================================
+//  LIVE WEATHER (Open-Meteo — free, no key, CORS-enabled)
+// ============================================================
+var _weather=null, _wxTimer=null;
+function weatherInfo(code, isDay){
+  var d=isDay!==0;
+  if(code===0) return {ic:d?"☀️":"🌙", label:"Clear"};
+  if(code===1) return {ic:d?"🌤️":"🌙", label:"Mostly Clear"};
+  if(code===2) return {ic:d?"⛅":"☁️", label:"Partly Cloudy"};
+  if(code===3) return {ic:"☁️", label:"Overcast"};
+  if(code===45||code===48) return {ic:"🌫️", label:"Fog"};
+  if(code>=51&&code<=57) return {ic:"🌦️", label:"Drizzle"};
+  if(code>=61&&code<=65) return {ic:"🌧️", label:"Rain"};
+  if(code===66||code===67) return {ic:"🌨️", label:"Freezing Rain"};
+  if(code>=71&&code<=77) return {ic:"🌨️", label:"Snow"};
+  if(code>=80&&code<=82) return {ic:"🌧️", label:"Rain Showers"};
+  if(code===85||code===86) return {ic:"🌨️", label:"Snow Showers"};
+  if(code===95) return {ic:"⛈️", label:"Thunderstorm"};
+  if(code>=96) return {ic:"⛈️", label:"Storm / Hail"};
+  return {ic:"🌡️", label:"—"};
+}
+function updateWeatherUI(){
+  var box=$("tbWeather"); if(!box||!_weather) return;
+  var w=_weather, info=weatherInfo(w.weather_code, w.is_day);
+  var t=Math.round(w.temperature_2m), feels=Math.round(w.apparent_temperature);
+  var ic=box.querySelector(".wx-ic"), tp=$("wxTemp"), cd=$("wxCond");
+  if(ic) ic.textContent=info.ic;
+  if(tp) tp.textContent=t+"°";
+  if(cd) cd.textContent=info.label;
+  var lowVis = [45,48,71,73,75,85,86].indexOf(w.weather_code)>=0 || (w.weather_code>=61&&w.weather_code<=67);
+  box.title=info.label+" · "+t+"°F (feels "+feels+"°) · Wind "+Math.round(w.wind_speed_10m)+" mph · Humidity "+w.relative_humidity_2m+"%"+(lowVis?" · ⚠ reduced visibility":"");
+  box.style.borderColor = lowVis ? "var(--p2)" : "var(--line)";
+}
+function fetchWeather(){
+  if(!TOWN||!TOWN.lat) return;
+  var url="https://api.open-meteo.com/v1/forecast?latitude="+TOWN.lat+"&longitude="+TOWN.lng+
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m"+
+    "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto";
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if(d&&d.current){ _weather=d.current; updateWeatherUI(); }
+  }).catch(function(){});
+}
+function startWeather(){ fetchWeather(); if(!_wxTimer) _wxTimer=setInterval(fetchWeather, 900000); } // refresh every 15 min
 
 // ============================================================
 //  CLOCK + SIMULATION LOOP

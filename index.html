@@ -93,6 +93,12 @@ button{font-family:inherit;cursor:pointer}
 .tb-weather .wx-t{display:flex;flex-direction:column;line-height:1.1}
 .tb-weather .wx-t b{font-size:14px;color:var(--text);font-weight:700}
 .tb-weather .wx-t small{font-size:9.5px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+/* Heat caution band (drops from top on login when it's very hot) */
+.heat-band{position:fixed;top:0;left:0;right:0;z-index:4000;display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:12px 18px;font-weight:800;font-size:14px;letter-spacing:.3px;color:#2a1400;text-align:center;
+  background:linear-gradient(90deg,#ffb24d,#ff6a00,#ffb24d);box-shadow:0 6px 22px rgba(255,106,0,.45);
+  transform:translateY(-102%);opacity:0;transition:transform .5s ease,opacity .5s ease}
+.heat-band.show{transform:translateY(0);opacity:1}
 .tb-spacer{flex:1}
 .tb-officer{text-align:right;line-height:1.2}
 .tb-officer .cs{font-weight:700;font-size:15px}
@@ -3054,16 +3060,26 @@ function updateWeatherUI(){
   box.title=info.label+" · "+t+"°F (feels "+feels+"°) · Wind "+Math.round(w.wind_speed_10m)+" mph · Humidity "+w.relative_humidity_2m+"%"+(lowVis?" · ⚠ reduced visibility":"");
   box.style.borderColor = lowVis ? "var(--p2)" : "var(--line)";
 }
+var _heatShown=false;
+function showHeatBand(temp){
+  if(_heatShown) return; _heatShown=true;
+  var b=document.createElement("div"); b.className="heat-band";
+  b.innerHTML="⚠ HEAT CAUTION — "+Math.round(temp)+"°F. Stay hydrated and watch for signs of heat exhaustion.";
+  document.body.appendChild(b);
+  requestAnimationFrame(function(){ b.classList.add("show"); });
+  setTimeout(function(){ b.classList.remove("show"); setTimeout(function(){ if(b.parentNode) b.parentNode.removeChild(b); }, 600); }, 5000);
+}
 function fetchWeather(){
   if(!TOWN||!TOWN.lat) return;
   var url="https://api.open-meteo.com/v1/forecast?latitude="+TOWN.lat+"&longitude="+TOWN.lng+
     "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m"+
     "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto";
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    if(d&&d.current){ _weather=d.current; updateWeatherUI(); }
+    if(d&&d.current){ _weather=d.current; updateWeatherUI();
+      if(d.current.temperature_2m>99) showHeatBand(d.current.temperature_2m); }
   }).catch(function(){});
 }
-function startWeather(){ fetchWeather(); if(!_wxTimer) _wxTimer=setInterval(fetchWeather, 900000); } // refresh every 15 min
+function startWeather(){ _heatShown=false; fetchWeather(); if(!_wxTimer) _wxTimer=setInterval(fetchWeather, 900000); } // refresh every 15 min; heat band shows once per login
 
 // ============================================================
 //  CLOCK + SIMULATION LOOP
